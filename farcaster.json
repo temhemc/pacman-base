@@ -1,0 +1,11 @@
+{
+  "name": "Base Pac-Man",
+  "domain": "pacman-base.vercel.app",
+  "icon": "https://basekit.online/icon.png",
+  "launcher": {
+    "title": "Play Pac-Man",
+    "action": {
+      "type": "launch_frame"
+    }
+  }
+}
