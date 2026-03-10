@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Base Pac-Man | Professional Mini-App</title>
     
-    <meta name="description" content="Play Base Pac-Man, a professional Farcaster Mini-App built on the Base network. Experience the retro classic re-imagined for the on-chain generation.">
-    <meta name="talent-protocol-verification" content="606a99..." />
+    <meta name="talentapp:project_verification" content="0f889eb8a2796e49a904e4a2c334579e8b0787a9d013792f7d6d2c9ef0a0d5674011aecd5c25e50b73577d2c92869d3baff1ab8389436e5aa31e8e62ca7ad6ab">
 
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="https://basekit.online/pacman-preview.png" />
@@ -25,7 +24,7 @@
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen">
 
-    <div class="text-white mb-4 text-2xl font-bold tracking-widest">SCORE: <span id="score">0</span></div>
+    <div class="text-white mb-4 text-2xl font-bold tracking-widest uppercase">Score: <span id="score">0</span></div>
     
     <canvas id="gameCanvas"></canvas>
 
@@ -39,7 +38,7 @@
     </div>
 
     <script>
-        // Farcaster SDK Initializer
+        // Farcaster SDK Initializer - Solves "Ready not called" (image_57591e.png)
         window.addEventListener('load', () => {
             if (window.farcaster?.sdk) {
                 window.farcaster.sdk.actions.ready();
@@ -48,19 +47,15 @@
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreElement = document.getElementById('score');
-        
-        canvas.width = 360;
-        canvas.height = 360;
+        canvas.width = 320;
+        canvas.height = 320;
 
-        let score = 0;
-        let pacman = { x: 180, y: 180, size: 14, dir: 'right', speed: 2.5 };
+        let pacman = { x: 160, y: 160, size: 14, dir: 'right', speed: 2 };
         
         function draw() {
             ctx.fillStyle = "black";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw Pacman
             ctx.beginPath();
             ctx.arc(pacman.x, pacman.y, pacman.size, 0.2 * Math.PI, 1.8 * Math.PI);
             ctx.lineTo(pacman.x, pacman.y);
@@ -68,13 +63,11 @@
             ctx.fill();
             ctx.closePath();
             
-            // Simple Logic & Movement
             if(pacman.dir === 'right') pacman.x += pacman.speed;
             if(pacman.dir === 'left') pacman.x -= pacman.speed;
             if(pacman.dir === 'up') pacman.y -= pacman.speed;
             if(pacman.dir === 'down') pacman.y += pacman.speed;
 
-            // Screen Wrap
             if(pacman.x > canvas.width) pacman.x = 0;
             if(pacman.x < 0) pacman.x = canvas.width;
             if(pacman.y > canvas.height) pacman.y = 0;
