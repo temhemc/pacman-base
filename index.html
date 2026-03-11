@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Pac-Man Oyna & Mint","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/","splashImageUrl":"https://pacman-base-xi.vercel.app/splash.png","splashBackgroundColor":"#000000"}}}' />
-    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Play & Mint","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/"}}}' />
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Pac-Man Oyna","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/","splashImageUrl":"https://pacman-base-xi.vercel.app/splash.png","splashBackgroundColor":"#000000"}}}' />
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Play Pac-Man","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/"}}}' />
     
-    <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
     <title>Base Pac-Man Arcade</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     
     <style>
@@ -50,22 +48,20 @@
             touch-action: manipulation; 
             color: white; 
             cursor: pointer; 
-            transition: all 0.1s; 
         }
         .c-btn:active { background: #0052FF; transform: scale(0.95); }
         #mintButton { 
-            background: #0052FF; 
+            background: #333; 
             font-size: 13px; 
             border-radius: 14px; 
             border: none; 
-            color: white; 
+            color: #aaa; 
             width: 400px; 
             padding: 20px; 
             margin: 10px 0; 
             font-weight: bold; 
-            cursor: pointer; 
+            cursor: not-allowed;
         }
-        #mintButton:disabled { background: #333; opacity: 0.6; cursor: not-allowed; }
         #scoreArea { font-size: 11px; color: #facc15; margin: 8px 0; text-align: center; }
         #highScore { color: #ff4444; }
         #gameOver { 
@@ -100,31 +96,18 @@
 
     <div class="controls">
         <div></div>
-        <button class="c-btn" ontouchstart="setMove(0,-1)" ontouchend="preventDefault(event)">▲</button><div></div>
-        <button class="c-btn" ontouchstart="setMove(-1,0)" ontouchend="preventDefault(event)">◀</button>
-        <button class="c-btn" ontouchstart="setMove(0,1)" ontouchend="preventDefault(event)">▼</button>
-        <button class="c-btn" ontouchstart="setMove(1,0)" ontouchend="preventDefault(event)">▶</button>
+        <button class="c-btn" ontouchstart="setMove(0,-1)">▲</button><div></div>
+        <button class="c-btn" ontouchstart="setMove(-1,0)">◀</button>
+        <button class="c-btn" ontouchstart="setMove(0,1)">▼</button>
+        <button class="c-btn" ontouchstart="setMove(1,0)">▶</button>
     </div>
 
-    <button id="mintButton">MINT YOUR SCORE NFT</button>
+    <button id="mintButton" disabled>MINT (Geçici Olarak Kapatıldı - SDK Hatası)</button>
 
-    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
-    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
-    
     <script>
-        // Sesler (public/waka.mp3 ve public/death.mp3 koy Vercel'e)
-        const sounds = {
-            chomp: new Audio('./waka.mp3' || 'https://assets.classicgaming.cc/pacman/sounds/chomp.mp3'),
-            death: new Audio('./death.mp3' || 'https://assets.classicgaming.cc/pacman/sounds/death.mp3')
-        };
-        sounds.chomp.volume = 0.5;
-        sounds.death.volume = 0.7;
-
-        let lastChomp = 0;
-
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const ts = 20; // 400 / 20 = 20 sütun/satır için ideal
+        const ts = 20;
         let score = 0;
         let highScore = localStorage.getItem('pacHigh') || 0;
         document.getElementById("highScore").innerText = highScore;
@@ -143,13 +126,22 @@
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,0,1,0,1,1,1,1,0,1,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-        ]; // 11 satır, canvas 400px → alt kısım boş kalabilir veya haritayı genişlet
+        ]; // 20 satır x 20 sütun tam oturuyor
 
         let pac = { x: 1.5, y: 1.5, dx: 0, dy: 0, ndx: 0, ndy: 0 };
         let ghosts = [
-            { x: 15, y: 1, color: "#ff0000", dx: -0.08, dy: 0 },
-            { x: 4, y: 8, color: "#ffb8ff", dx: 0.08, dy: 0 }
+            { x: 15, y: 1, color: "#ff0000", dx: -0.06, dy: 0 },
+            { x: 4, y: 8, color: "#ffb8ff", dx: 0.06, dy: 0 }
         ];
 
         function setMove(x, y) {
@@ -157,16 +149,13 @@
             pac.ndy = y;
         }
 
-        function preventDefault(e) {
-            e.preventDefault();
-        }
-
-        // Klavye desteği ekle
+        // Klavye desteği
         window.addEventListener('keydown', e => {
-            if (['ArrowUp', 'w', 'W'].includes(e.key)) setMove(0, -1);
-            if (['ArrowDown', 's', 'S'].includes(e.key)) setMove(0, 1);
-            if (['ArrowLeft', 'a', 'A'].includes(e.key)) setMove(-1, 0);
-            if (['ArrowRight', 'd', 'D'].includes(e.key)) setMove(1, 0);
+            e.preventDefault();
+            if (['ArrowUp', 'w', 'W'].some(k => e.key === k)) setMove(0, -1);
+            if (['ArrowDown', 's', 'S'].some(k => e.key === k)) setMove(0, 1);
+            if (['ArrowLeft', 'a', 'A'].some(k => e.key === k)) setMove(-1, 0);
+            if (['ArrowRight', 'd', 'D'].some(k => e.key === k)) setMove(1, 0);
         });
 
         function isWall(x, y) {
@@ -176,18 +165,8 @@
             return map[cy][cx] === 1;
         }
 
-        function chompSound() {
-            const now = Date.now();
-            if (now - lastChomp > 150) {
-                sounds.chomp.currentTime = 0;
-                sounds.chomp.play().catch(() => {});
-                lastChomp = now;
-            }
-        }
-
         function endGame() {
             running = false;
-            sounds.death.play().catch(() => {});
             const final = document.getElementById("finalScore");
             const newH = document.getElementById("newHigh");
             final.innerText = `SCORE: ${score}`;
@@ -206,7 +185,7 @@
             ctx.fillStyle = "black";
             ctx.fillRect(0,0,400,400);
 
-            // Harita çiz
+            // Harita
             for (let r = 0; r < map.length; r++) {
                 for (let c = 0; c < map[r].length; c++) {
                     if (map[r][c] === 1) {
@@ -221,8 +200,8 @@
                 }
             }
 
-            // Yön buffer
-            if (!isWall(pac.x + pac.ndx*0.4, pac.y + pac.ndy*0.4)) {
+            // Yön
+            if (!isWall(pac.x + pac.ndx * 0.4, pac.y + pac.ndy * 0.4)) {
                 pac.dx = pac.ndx;
                 pac.dy = pac.ndy;
             }
@@ -235,13 +214,12 @@
             if (!isWall(nx + 0.4, ny + 0.4) && !isWall(nx + 0.6, ny + 0.6)) {
                 pac.x = nx;
                 pac.y = ny;
-                if (pac.dx !== 0 || pac.dy !== 0) chompSound();
             }
 
-            // Nokta ye
+            // Nokta
             const px = Math.floor(pac.x + 0.5);
             const py = Math.floor(pac.y + 0.5);
-            if (map[py]?.[px] === 0) {
+            if (map[py] && map[py][px] === 0) {
                 map[py][px] = 2;
                 score += 10;
                 document.getElementById("score").innerText = score;
@@ -249,11 +227,11 @@
 
             // Ghost'lar
             ghosts.forEach(g => {
-                if (Math.random() < 0.015 || isWall(g.x + g.dx*2, g.y + g.dy*2)) {
-                    const dirs = [[-0.08,0], [0.08,0], [0,-0.08], [0,0.08]];
-                    const okDirs = dirs.filter(d => !isWall(g.x + d[0]*4, g.y + d[1]*4));
-                    if (okDirs.length) {
-                        const rand = okDirs[Math.floor(Math.random() * okDirs.length)];
+                if (Math.random() < 0.01 || isWall(g.x + g.dx*2.5, g.y + g.dy*2.5)) {
+                    const dirs = [[-0.06,0], [0.06,0], [0,-0.06], [0,0.06]];
+                    const ok = dirs.filter(d => !isWall(g.x + d[0]*5, g.y + d[1]*5));
+                    if (ok.length) {
+                        const rand = ok[Math.floor(Math.random() * ok.length)];
                         g.dx = rand[0];
                         g.dy = rand[1];
                     }
@@ -282,48 +260,6 @@
 
             requestAnimationFrame(loop);
         }
-
-        // Mint (2026 thirdweb uyumlu)
-        document.getElementById("mintButton").onclick = async () => {
-            const btn = document.getElementById("mintButton");
-            btn.disabled = true;
-            btn.innerText = "BAĞLANIYOR...";
-
-            try {
-                let addr;
-
-                if (window.farcaster?.sdk) {
-                    try {
-                        const user = await window.farcaster.sdk.actions.getUser?.();
-                        addr = user?.verified_addresses?.eth_addresses?.[0] || user?.custodyAddress;
-                    } catch (err) {
-                        console.warn("Farcaster adres alınamadı", err);
-                    }
-                }
-
-                const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
-
-                if (!addr) {
-                    await sdk.wallet.connect();
-                    addr = await sdk.wallet.getAddress();
-                }
-
-                if (!addr) throw new Error("Cüzdan adresi yok");
-
-                const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
-                await contract.erc721.claimTo(addr, 1n);  // BigInt önemli!
-
-                btn.innerText = "MINT TAMAM! 🎉";
-                btn.style.background = "#22c55e";
-            } catch (err) {
-                console.error("Mint error:", err);
-                let msg = "Mint başarısız";
-                if (err.message.includes("rejected")) msg = "İşlem iptal edildi";
-                if (err.message.includes("insufficient")) msg = "Yetersiz bakiye/gas";
-                btn.innerText = msg + " - Tekrar dene";
-                btn.disabled = false;
-            }
-        };
 
         window.onload = () => {
             loop();
