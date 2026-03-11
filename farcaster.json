@@ -1,17 +1,13 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOiA4ODg4ODgsICJ0eXBlIjogImN1c3RvZHkiLCAia2V5IjogIjB4NDYwNGEwRkQ2NTg0M0Y4YjZFN2NEM0U2N0M1RTNkZmY3QjBjOWMxMiJ9",
-    "payload": "eyJkb21haW4iOiAicGFjbWFuLWJhc2UteGkudmVyY2VsLmFwcCJ9",
-    "signature": "MHg0NjA0YTBGRDY1ODQzRjhiNmU3Y0Q4RTY3QzVFM2RGZjdCMGM5YzEy..."
-  },
-  "frame": {
+  "miniapp": {
     "version": "1",
-    "name": "Base Pac-Man Arcade",
-    "iconUrl": "https://pacman-base-xi.vercel.app/icon.png",
-    "homeUrl": "https://pacman-base-xi.vercel.app",
-    "imageUrl": "https://pacman-base-xi.vercel.app/og-image.png",
-    "buttonTitle": "Play & Mint",
-    "splashImageUrl": "https://pacman-base-xi.vercel.app/splash.png",
-    "splashBackgroundColor": "#000000"
+    "name": "Base Pac-Man",
+    "homeUrl": "https://pacman-base-xi.vercel.app/",
+    "iconUrl": "https://pacman-base-xi.vercel.app/icon.png"
+  },
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
   }
 }
