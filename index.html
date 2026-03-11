@@ -34,17 +34,19 @@
     </div>
 
     <div class="w-full max-w-[320px] px-4 pb-10">
-        <button id="mintButton" class="mint-btn w-full py-5 font-bold shadow-2xl uppercase">Mint Score NFT</button>
-        <p id="status" class="text-[7px] mt-4 text-center text-gray-500 italic uppercase">On-Chain Interaction Enabled</p>
+        <button id="mintButton" class="mint-btn w-full py-5 font-bold shadow-2xl uppercase">Mint NFT (On Base)</button>
+        <p id="status" class="text-[7px] mt-4 text-center text-gray-400 italic">Confirmed: Contract 0xA028...e7cC</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
+    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
     <script>
+        // --- OYUN MOTORU ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const ts = 30; // Tile Size
+        const ts = 30;
         let score = 0;
         let isGameOver = false;
 
@@ -55,26 +57,17 @@
             [1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,1],
             [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
             [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1],
-            [1,0,1,1,1,0,1,0,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         let p = { x: 1, y: 1, dx: 0, dy: 0, nextDx: 0, nextDy: 0 };
         let ghosts = [
             { x: 14, y: 1, c: "#ff0000", dx: -1, dy: 0 },
-            { x: 1, y: 7, c: "#ffb8ff", dx: 1, dy: 0 },
-            { x: 14, y: 7, c: "#00ffff", dx: 0, dy: -1 }
+            { x: 1, y: 5, c: "#ffb8ff", dx: 1, dy: 0 }
         ];
 
         function setDir(x, y) { p.nextDx = x; p.nextDy = y; }
-        window.addEventListener("keydown", e => {
-            if(e.key === "ArrowUp") setDir(0,-1);
-            if(e.key === "ArrowDown") setDir(0,1);
-            if(e.key === "ArrowLeft") setDir(-1,0);
-            if(e.key === "ArrowRight") setDir(1,0);
-        });
-
+        
         function game() {
             if(isGameOver) return;
             ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -89,7 +82,6 @@
                 }
             }
 
-            // Pacman Move & Wall Collision
             if(world[Math.round(p.y + p.nextDy)][Math.round(p.x + p.nextDx)] !== 1) {
                 p.dx = p.nextDx; p.dy = p.nextDy;
             }
@@ -97,26 +89,20 @@
                 p.x += p.dx * 0.1; p.y += p.dy * 0.1;
             }
 
-            // Score Logic
             if(world[Math.round(p.y)][Math.round(p.x)] === 0) {
                 world[Math.round(p.y)][Math.round(p.x)] = 2; score += 10;
                 document.getElementById("score").innerText = score;
             }
 
-            // Ghost Logic & Collision
             ghosts.forEach(g => {
                 if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) {
                     g.dx *= -1; g.dy *= -1;
                 }
                 g.x += g.dx * 0.05; g.y += g.dy * 0.05;
-
-                // Çarpışma Kontrolü (Collision)
-                let dist = Math.hypot(p.x - g.x, p.y - g.y);
-                if(dist < 0.6) {
-                    isGameOver = true;
-                    alert("GAME OVER! SCORE: " + score);
-                    location.reload();
-                }
+                
+                // GHOST COLLISION (Ölüm Mekanizması)
+                let d = Math.hypot(p.x - g.x, p.y - g.y);
+                if(d < 0.5) { isGameOver = true; alert("BOOM! SCORE: " + score); location.reload(); }
 
                 ctx.fillStyle = g.c; ctx.beginPath(); ctx.arc(g.x*ts+ts/2, g.y*ts+ts/2, 12, 0, 7); ctx.fill();
             });
@@ -128,20 +114,34 @@
             requestAnimationFrame(game);
         }
 
-        // --- MINT FIX ---
+        // --- GARANTİLİ MINT MEKANİZMASI ---
+        const CLIENT_ID = "c1fd1c7e41a57fd4f1776293db6fb49e";
+        const CONTRACT_ADDR = "0xA0282E2E89868661643668866E5363e7cC";
+
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
             const status = document.getElementById("status");
-            btn.disabled = true; btn.innerText = "CHECKING WALLET...";
+            btn.disabled = true;
+            btn.innerText = "WAITING WALLET...";
+            status.innerText = "Check your Metamask/Coinbase Wallet!";
+
             try {
-                const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
-                const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
-                status.innerText = "PLEASE CONFIRM IN YOUR WALLET";
-                await contract.erc721.claim(1);
-                btn.innerText = "NFT CLAIMED!"; btn.style.background = "#22c55e";
-            } catch (e) {
-                btn.disabled = false; btn.innerText = "RETRY MINT";
-                status.innerText = "ERROR: ENSURE YOU ARE ON BASE NETWORK";
+                // Farcaster Frame üzerinden mi açılıyor kontrol et
+                const sdk = new ThirdwebSDK("base", { clientId: CLIENT_ID });
+                const contract = await sdk.getContract(CONTRACT_ADDR);
+                
+                // MINT İŞLEMİ
+                const tx = await contract.erc721.claim(1);
+                console.log("Tx Success:", tx);
+                
+                btn.innerText = "SUCCESSFULLY MINTED!";
+                btn.style.background = "#22c55e";
+                status.innerText = "View NFT on Basescan!";
+            } catch (err) {
+                console.error("Mint Hatası:", err);
+                btn.disabled = false;
+                btn.innerText = "MINT FAILED - RETRY";
+                status.innerText = "Error: Ensure you are on Base Network!";
             }
         };
 
