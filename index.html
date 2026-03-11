@@ -3,72 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
     <meta property="fc:frame" content='{"version":"next","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Play & Mint","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/"}}}' />
-    
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
     <title>Base Pac-Man Arcade</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    
     <style>
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
-        #game-box { border: 4px solid #0052FF; box-shadow: 0 0 30px #0052FF; width: 340px; margin-top: 10px; background: #000; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
+        #game-wrapper { border: 4px solid #0052FF; box-shadow: 0 0 20px #0052FF; background: #000; margin-top: 10px; width: 340px; height: 340px; }
         canvas { display: block; image-rendering: pixelated; }
-        .controls { display: grid; grid-template-columns: repeat(3, 75px); gap: 10px; margin-top: 15px; }
-        .btn-c { background: #111; border: 2px solid #0052FF; height: 65px; display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 15px; touch-action: manipulation; color: white; }
-        .btn-c:active { background: #0052FF; }
-        #mintButton { background: #0052FF; font-size: 11px; border-radius: 12px; border: none; color: white; width: 340px; padding: 22px; margin-top: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0, 82, 255, 0.5); }
-        #mintButton:disabled { background: #222; opacity: 0.6; }
+        .controls { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; margin-top: 20px; z-index: 100; }
+        .c-btn { background: #111; border: 2px solid #0052FF; height: 65px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; touch-action: manipulation; color: white; cursor: pointer; }
+        .c-btn:active { background: #0052FF; }
+        #mintButton { background: #0052FF; font-size: 11px; border-radius: 12px; border: none; color: white; width: 340px; padding: 22px; margin-top: 25px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 82, 255, 0.4); }
+        #mintButton:disabled { background: #333; opacity: 0.6; }
     </style>
 </head>
 <body>
 
-    <div class="mt-4 mb-2 text-[#facc15] text-[10px] uppercase">Score: <span id="score">0</span></div>
+    <div class="mt-4 mb-2 text-[#facc15] text-[10px]">SCORE: <span id="score">0</span></div>
     
-    <div id="game-box">
-        <canvas id="gameCanvas" width="340" height="420"></canvas>
+    <div id="game-wrapper">
+        <canvas id="gameCanvas" width="340" height="340"></canvas>
     </div>
 
     <div class="controls">
-        <div></div><button class="btn-c" onpointerdown="move(0,-1)">▲</button><div></div>
-        <button class="btn-c" onpointerdown="move(-1,0)">◀</button>
-        <button class="btn-c" onpointerdown="move(0,1)">▼</button>
-        <button class="btn-c" onpointerdown="move(1,0)">▶</button>
+        <div></div><button class="c-btn" onpointerdown="setMove(0,-1)">▲</button><div></div>
+        <button class="c-btn" onpointerdown="setMove(-1,0)">◀</button>
+        <button class="c-btn" onpointerdown="setMove(0,1)">▼</button>
+        <button class="c-btn" onpointerdown="setMove(1,0)">▶</button>
     </div>
 
-    <button id="mintButton">MINT NFT ON BASE</button>
-    <p id="st" class="text-[7px] mt-4 text-gray-500 uppercase tracking-widest italic text-center">Confirm in your connected wallet</p>
+    <button id="mintButton">MINT SCORE NFT</button>
+    <p id="st" class="text-[7px] mt-4 text-gray-500 uppercase italic mb-8">Base Mainnet Verified</p>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
 
     <script>
-        // --- OYUN MOTORU (TAM EKRAN) ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const ts = 20; 
-        let score = 0;
+        const ts = 20; let score = 0;
 
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1],
-            [1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,0,1,0,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1],
-            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         let p = { x: 1, y: 1, dx: 0, dy: 0, nDx: 0, nDy: 0 };
         let gs = [{ x: 15, y: 1, c: "#ff0000", dx: -1, dy: 0 }, { x: 1, y: 7, c: "#ffb8ff", dx: 1, dy: 0 }];
 
-        function move(x, y) { p.nDx = x; p.nDy = y; }
+        function setMove(x, y) { p.nDx = x; p.nDy = y; }
         
-        function play() {
+        function engine() {
             ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
@@ -88,33 +83,26 @@
             });
 
             ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(p.x*ts+10, p.y*ts+10, 9, 0.2*Math.PI, 1.8*Math.PI); ctx.lineTo(p.x*ts+10, p.y*ts+10); ctx.fill();
-            requestAnimationFrame(play);
+            requestAnimationFrame(engine);
         }
 
-        // --- MINT MEKANİZMASI (STABİL) ---
+        // --- MINT FIX ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
             btn.disabled = true; btn.innerText = "CONNECTING...";
             try {
                 const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
-                
-                // Farcaster cüzdanını bağlamaya çalış
                 await sdk.wallet.connect(); 
-                
                 const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
-                document.getElementById("st").innerText = "CONFIRMING TRANSACTION...";
-                
                 await contract.erc721.claim(1);
                 btn.innerText = "MINTED!"; btn.style.background = "#22c55e";
-                document.getElementById("st").innerText = "SUCCESS! NFT ADDED TO WALLET";
             } catch (e) {
                 console.error(e);
-                btn.disabled = false; btn.innerText = "MINT FAILED - RETRY";
-                document.getElementById("st").innerText = "ERROR: ENSURE BASE NETWORK IS SELECTED";
+                btn.disabled = false; btn.innerText = "RETRY MINT";
             }
         };
 
-        window.onload = () => { play(); if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready(); };
+        window.onload = () => { engine(); if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready(); };
     </script>
 </body>
 </html>
