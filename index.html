@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- Farcaster Mini App meta tags -->
     <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Pac-Man Oyna & Mint","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/","splashImageUrl":"https://pacman-base-xi.vercel.app/splash.png","splashBackgroundColor":"#000000"}}}' />
     <meta name="fc:frame" content='{"version":"next","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Play & Mint","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/"}}}' />
     
@@ -24,23 +23,23 @@
             flex-direction: column; 
             align-items: center; 
             min-height: 100vh; 
-            overflow-y: auto; 
-            overflow-x: hidden; 
+            overflow: hidden; 
         }
         #game-wrapper { 
             border: 4px solid #0052FF; 
             box-shadow: 0 0 20px #0052FF; 
             background: #000; 
-            margin-top: 8px; 
-            width: 380px; 
-            height: 380px; 
+            margin: 10px auto; 
+            width: 400px; 
+            height: 400px; 
+            position: relative;
         }
         canvas { display: block; image-rendering: pixelated; }
         .controls { 
             display: grid; 
             grid-template-columns: repeat(3, 80px); 
             gap: 12px; 
-            margin: 20px 0; 
+            margin: 15px 0; 
         }
         .c-btn { 
             background: #111; 
@@ -56,141 +55,165 @@
         .c-btn:active { background: #0052FF; transform: scale(0.95); }
         #mintButton { 
             background: #0052FF; 
-            font-size: 12px; 
+            font-size: 13px; 
             border-radius: 14px; 
             border: none; 
             color: white; 
-            width: 380px; 
-            padding: 24px; 
-            margin: 10px 0 20px; 
+            width: 400px; 
+            padding: 20px; 
+            margin: 10px 0; 
             font-weight: bold; 
             cursor: pointer; 
-            box-shadow: 0 4px 15px rgba(0, 82, 255, 0.4); 
         }
         #mintButton:disabled { background: #333; opacity: 0.6; cursor: not-allowed; }
-        #scoreArea { font-size: 11px; color: #facc15; margin: 10px 0; text-align: center; }
+        #scoreArea { font-size: 11px; color: #facc15; margin: 8px 0; text-align: center; }
         #highScore { color: #ff4444; }
-        #gameOver { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); padding: 20px; border: 3px solid #ff0000; border-radius: 10px; text-align: center; display: none; z-index: 10; }
+        #gameOver { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: rgba(0,0,0,0.85); 
+            padding: 25px; 
+            border: 3px solid #ff0000; 
+            border-radius: 12px; 
+            text-align: center; 
+            display: none; 
+            z-index: 20; 
+            width: 80%; 
+            max-width: 320px;
+        }
     </style>
 </head>
 <body>
     <div id="scoreArea">
-        SCORE: <span id="score">0</span> &nbsp;&nbsp; HIGH SCORE: <span id="highScore">0</span>
+        SCORE: <span id="score">0</span> &nbsp; HIGH: <span id="highScore">0</span>
     </div>
    
-    <div id="game-wrapper" style="position: relative;">
-        <canvas id="gameCanvas" width="380" height="380"></canvas>
+    <div id="game-wrapper">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
         <div id="gameOver">
-            <div style="font-size: 18px; color: #ff4444;">OYUN BİTTİ!</div>
-            <div id="finalScore" style="font-size: 14px; margin: 10px 0;"></div>
+            <div style="font-size: 20px; color: #ff4444;">GAME OVER</div>
+            <div id="finalScore" style="font-size: 14px; margin: 12px 0;"></div>
             <div id="newHigh" style="color: #ffff00; font-size: 14px;"></div>
         </div>
     </div>
 
     <div class="controls">
         <div></div>
-        <button class="c-btn" onpointerdown="setMove(0,-1)">▲</button><div></div>
-        <button class="c-btn" onpointerdown="setMove(-1,0)">◀</button>
-        <button class="c-btn" onpointerdown="setMove(0,1)">▼</button>
-        <button class="c-btn" onpointerdown="setMove(1,0)">▶</button>
+        <button class="c-btn" ontouchstart="setMove(0,-1)" ontouchend="preventDefault(event)">▲</button><div></div>
+        <button class="c-btn" ontouchstart="setMove(-1,0)" ontouchend="preventDefault(event)">◀</button>
+        <button class="c-btn" ontouchstart="setMove(0,1)" ontouchend="preventDefault(event)">▼</button>
+        <button class="c-btn" ontouchstart="setMove(1,0)" ontouchend="preventDefault(event)">▶</button>
     </div>
 
-    <button id="mintButton">MINT SCORE NFT</button>
+    <button id="mintButton">MINT YOUR SCORE NFT</button>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
     
     <script>
-        // Sesler (public klasörüne koyduğun dosyaları kullan veya direkt ücretsiz link ver)
+        // Sesler (public/waka.mp3 ve public/death.mp3 koy Vercel'e)
         const sounds = {
-            chomp: new Audio('./waka.mp3'),       // veya 'https://example.com/pacman-chomp.mp3'
-            death: new Audio('./death.mp3')       // veya ücretsiz death sesi linki
+            chomp: new Audio('./waka.mp3' || 'https://assets.classicgaming.cc/pacman/sounds/chomp.mp3'),
+            death: new Audio('./death.mp3' || 'https://assets.classicgaming.cc/pacman/sounds/death.mp3')
         };
-        sounds.chomp.volume = 0.6;
-        sounds.death.volume = 0.8;
+        sounds.chomp.volume = 0.5;
+        sounds.death.volume = 0.7;
 
-        let lastChompTime = 0;
+        let lastChomp = 0;
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const ts = 20;
+        const ts = 20; // 400 / 20 = 20 sütun/satır için ideal
         let score = 0;
-        let highScore = localStorage.getItem('pacmanHighScore') || 0;
+        let highScore = localStorage.getItem('pacHigh') || 0;
         document.getElementById("highScore").innerText = highScore;
 
-        let mouthOpen = true;
-        let gameRunning = true;
+        let mouth = true;
+        let running = true;
 
-        const world = [ /* aynı harita */ 
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,1,0,1,0,1,1,1,1,0,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,0,1,0,1,1,1,1,0,1,0,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ]; // 11 satır, canvas 400px → alt kısım boş kalabilir veya haritayı genişlet
+
+        let pac = { x: 1.5, y: 1.5, dx: 0, dy: 0, ndx: 0, ndy: 0 };
+        let ghosts = [
+            { x: 15, y: 1, color: "#ff0000", dx: -0.08, dy: 0 },
+            { x: 4, y: 8, color: "#ffb8ff", dx: 0.08, dy: 0 }
         ];
 
-        let p = { x: 1.5, y: 1.5, dx: 0, dy: 0, nDx: 0, nDy: 0 };
-        let gs = [
-            { x: 15, y: 1, c: "#ff0000", dx: -0.12, dy: 0 },
-            { x: 3, y: 7, c: "#ffb8ff", dx: 0.12, dy: 0 }
-        ];
+        function setMove(x, y) {
+            pac.ndx = x;
+            pac.ndy = y;
+        }
 
-        function setMove(x, y) { p.nDx = x; p.nDy = y; }
+        function preventDefault(e) {
+            e.preventDefault();
+        }
+
+        // Klavye desteği ekle
+        window.addEventListener('keydown', e => {
+            if (['ArrowUp', 'w', 'W'].includes(e.key)) setMove(0, -1);
+            if (['ArrowDown', 's', 'S'].includes(e.key)) setMove(0, 1);
+            if (['ArrowLeft', 'a', 'A'].includes(e.key)) setMove(-1, 0);
+            if (['ArrowRight', 'd', 'D'].includes(e.key)) setMove(1, 0);
+        });
 
         function isWall(x, y) {
             const cx = Math.floor(x);
             const cy = Math.floor(y);
-            if (cy < 0 || cy >= world.length || cx < 0 || cx >= world[0].length) return true;
-            return world[cy][cx] === 1;
+            if (cy < 0 || cy >= map.length || cx < 0 || cx >= map[0].length) return true;
+            return map[cy][cx] === 1;
         }
 
-        function playChomp() {
+        function chompSound() {
             const now = Date.now();
-            if (now - lastChompTime > 120) {  // çok hızlı çalmasın
+            if (now - lastChomp > 150) {
                 sounds.chomp.currentTime = 0;
-                sounds.chomp.play().catch(() => {}); // autoplay policy için catch
-                lastChompTime = now;
+                sounds.chomp.play().catch(() => {});
+                lastChomp = now;
             }
         }
 
-        function gameOver() {
-            gameRunning = false;
-            sounds.death.currentTime = 0;
+        function endGame() {
+            running = false;
             sounds.death.play().catch(() => {});
-
             const final = document.getElementById("finalScore");
-            const newHigh = document.getElementById("newHigh");
+            const newH = document.getElementById("newHigh");
             final.innerText = `SCORE: ${score}`;
             if (score > highScore) {
                 highScore = score;
-                localStorage.setItem('pacmanHighScore', highScore);
+                localStorage.setItem('pacHigh', highScore);
                 document.getElementById("highScore").innerText = highScore;
-                newHigh.innerText = "NEW HIGH SCORE!";
-            } else {
-                newHigh.innerText = "";
+                newH.innerText = "NEW HIGH SCORE!";
             }
             document.getElementById("gameOver").style.display = "block";
         }
 
-        function engine() {
-            if (!gameRunning) return;
+        function loop() {
+            if (!running) return;
 
             ctx.fillStyle = "black";
-            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillRect(0,0,400,400);
 
-            // Harita
-            for(let r = 0; r < world.length; r++) {
-                for(let c = 0; c < world[r].length; c++) {
-                    if(world[r][c] === 1) {
+            // Harita çiz
+            for (let r = 0; r < map.length; r++) {
+                for (let c = 0; c < map[r].length; c++) {
+                    if (map[r][c] === 1) {
                         ctx.fillStyle = "#0052FF";
                         ctx.fillRect(c*ts, r*ts, ts-1, ts-1);
-                    } else if(world[r][c] === 0) {
-                        ctx.fillStyle = "#fff";
+                    } else if (map[r][c] === 0) {
+                        ctx.fillStyle = "white";
                         ctx.beginPath();
                         ctx.arc(c*ts + ts/2, r*ts + ts/2, 3, 0, Math.PI*2);
                         ctx.fill();
@@ -199,109 +222,112 @@
             }
 
             // Yön buffer
-            const testX = p.x + p.nDx * 0.3;
-            const testY = p.y + p.nDy * 0.3;
-            if (!isWall(testX + 0.4, testY + 0.4) && !isWall(testX + 0.6, testY + 0.6)) {
-                p.dx = p.nDx;
-                p.dy = p.nDy;
+            if (!isWall(pac.x + pac.ndx*0.4, pac.y + pac.ndy*0.4)) {
+                pac.dx = pac.ndx;
+                pac.dy = pac.ndy;
             }
 
-            // Hareket + nokta yeme
-            const speed = 0.18;
-            const newX = p.x + p.dx * speed;
-            const newY = p.y + p.dy * speed;
+            // Hareket
+            const spd = 0.16;
+            const nx = pac.x + pac.dx * spd;
+            const ny = pac.y + pac.dy * spd;
 
-            if (!isWall(newX + 0.4, newY + 0.4) && !isWall(newX + 0.6, newY + 0.6)) {
-                p.x = newX;
-                p.y = newY;
-                if (p.dx !== 0 || p.dy !== 0) playChomp();  // hareket varsa ses
+            if (!isWall(nx + 0.4, ny + 0.4) && !isWall(nx + 0.6, ny + 0.6)) {
+                pac.x = nx;
+                pac.y = ny;
+                if (pac.dx !== 0 || pac.dy !== 0) chompSound();
             }
 
-            const px = Math.floor(p.x + 0.5);
-            const py = Math.floor(p.y + 0.5);
-            if (world[py]?.[px] === 0) {
-                world[py][px] = 2;
+            // Nokta ye
+            const px = Math.floor(pac.x + 0.5);
+            const py = Math.floor(pac.y + 0.5);
+            if (map[py]?.[px] === 0) {
+                map[py][px] = 2;
                 score += 10;
                 document.getElementById("score").innerText = score;
             }
 
             // Ghost'lar
-            gs.forEach(g => {
-                if (Math.random() < 0.02 || isWall(g.x + g.dx * 1.5, g.y + g.dy * 1.5)) {
-                    const dirs = [[-0.12,0], [0.12,0], [0,-0.12], [0,0.12]];
-                    const valid = dirs.filter(d => !isWall(g.x + d[0]*6, g.y + d[1]*6));
-                    if (valid.length) {
-                        const rd = valid[Math.floor(Math.random()*valid.length)];
-                        g.dx = rd[0]; g.dy = rd[1];
+            ghosts.forEach(g => {
+                if (Math.random() < 0.015 || isWall(g.x + g.dx*2, g.y + g.dy*2)) {
+                    const dirs = [[-0.08,0], [0.08,0], [0,-0.08], [0,0.08]];
+                    const okDirs = dirs.filter(d => !isWall(g.x + d[0]*4, g.y + d[1]*4));
+                    if (okDirs.length) {
+                        const rand = okDirs[Math.floor(Math.random() * okDirs.length)];
+                        g.dx = rand[0];
+                        g.dy = rand[1];
                     }
                 }
                 g.x += g.dx;
                 g.y += g.dy;
 
-                if (Math.hypot(p.x - g.x, p.y - g.y) < 0.7) {
-                    gameOver();
+                if (Math.hypot(pac.x - g.x, pac.y - g.y) < 0.6) {
+                    endGame();
                 }
 
-                ctx.fillStyle = g.c;
+                ctx.fillStyle = g.color;
                 ctx.beginPath();
-                ctx.arc(g.x*ts + ts/2, g.y*ts + ts/2, 9, 0, Math.PI*2);
+                ctx.arc(g.x*ts + ts/2, g.y*ts + ts/2, 10, 0, Math.PI*2);
                 ctx.fill();
             });
 
-            // Pac-Man çiz + ağız
-            mouthOpen = !mouthOpen;
+            // Pac-Man
+            mouth = !mouth;
             ctx.fillStyle = "#facc15";
             ctx.beginPath();
-            const angle = mouthOpen ? 0.3 : 0.05;
-            ctx.arc(p.x*ts + ts/2, p.y*ts + ts/2, ts/2 - 2, angle*Math.PI, (2 - angle)*Math.PI);
-            ctx.lineTo(p.x*ts + ts/2, p.y*ts + ts/2);
+            const ang = mouth ? 0.35 : 0.05;
+            ctx.arc(pac.x*ts + ts/2, pac.y*ts + ts/2, ts/2 - 2, ang*Math.PI, (2-ang)*Math.PI);
+            ctx.lineTo(pac.x*ts + ts/2, pac.y*ts + ts/2);
             ctx.fill();
 
-            requestAnimationFrame(engine);
+            requestAnimationFrame(loop);
         }
 
-        // Mint (iyileştirilmiş + hata yönetimi)
+        // Mint (2026 thirdweb uyumlu)
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
             btn.disabled = true;
             btn.innerText = "BAĞLANIYOR...";
 
             try {
-                let address;
+                let addr;
 
                 if (window.farcaster?.sdk) {
                     try {
-                        const user = await window.farcaster.sdk.actions.getUser();
-                        address = user?.verified_addresses?.eth_addresses?.[0];
-                    } catch (e) {
-                        console.warn("Farcaster user alınamadı", e);
+                        const user = await window.farcaster.sdk.actions.getUser?.();
+                        addr = user?.verified_addresses?.eth_addresses?.[0] || user?.custodyAddress;
+                    } catch (err) {
+                        console.warn("Farcaster adres alınamadı", err);
                     }
                 }
 
                 const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
 
-                if (!address) {
+                if (!addr) {
                     await sdk.wallet.connect();
-                    address = await sdk.wallet.getAddress();
+                    addr = await sdk.wallet.getAddress();
                 }
 
-                if (!address) throw new Error("Cüzdan adresi bulunamadı");
+                if (!addr) throw new Error("Cüzdan adresi yok");
 
                 const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
-                await contract.erc721.claimTo(address, 1);
+                await contract.erc721.claimTo(addr, 1n);  // BigInt önemli!
 
-                btn.innerText = "MINT BAŞARILI! 🎉";
+                btn.innerText = "MINT TAMAM! 🎉";
                 btn.style.background = "#22c55e";
-            } catch (e) {
-                console.error("Mint hatası:", e);
-                btn.innerText = `HATA: ${e.message.includes("user rejected") ? "İşlem iptal edildi" : "Mint başarısız"}`;
+            } catch (err) {
+                console.error("Mint error:", err);
+                let msg = "Mint başarısız";
+                if (err.message.includes("rejected")) msg = "İşlem iptal edildi";
+                if (err.message.includes("insufficient")) msg = "Yetersiz bakiye/gas";
+                btn.innerText = msg + " - Tekrar dene";
                 btn.disabled = false;
             }
         };
 
         window.onload = () => {
-            engine();
-            if (window.farcaster?.sdk) window.farcaster.sdk.actions.ready();
+            loop();
+            if (window.farcaster?.sdk) window.farcaster.sdk.actions.ready?.();
         };
     </script>
 </body>
