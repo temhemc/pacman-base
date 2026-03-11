@@ -3,27 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta property="fc:frame" content='{"version":"next","imageUrl":"https://pacman-base-xi.vercel.app/og-image.png","button":{"title":"Play & Mint","action":{"type":"launch_frame","name":"Base Pac-Man","url":"https://pacman-base-xi.vercel.app/"}}}' />
+    
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
     <title>Base Pac-Man Arcade</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
+    
     <style>
         body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
-        #game-box { border: 4px solid #0052FF; box-shadow: 0 0 25px #0052FF; background: #000; width: 340px; margin-top: 10px; }
+        #game-box { border: 4px solid #0052FF; box-shadow: 0 0 30px #0052FF; width: 340px; margin-top: 10px; background: #000; }
         canvas { display: block; image-rendering: pixelated; }
-        .controls { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; margin-top: 15px; }
-        .btn-c { background: #111; border: 2px solid #0052FF; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; touch-action: manipulation; }
+        .controls { display: grid; grid-template-columns: repeat(3, 75px); gap: 10px; margin-top: 15px; }
+        .btn-c { background: #111; border: 2px solid #0052FF; height: 65px; display: flex; align-items: center; justify-content: center; font-size: 28px; border-radius: 15px; touch-action: manipulation; color: white; }
         .btn-c:active { background: #0052FF; }
-        .mint-area { width: 340px; margin-top: 20px; padding-bottom: 30px; }
-        #mintButton { background: #0052FF; font-size: 11px; border-radius: 12px; border: none; color: white; width: 100%; padding: 22px; font-weight: bold; cursor: pointer; }
-        #mintButton:disabled { background: #333; opacity: 0.6; }
+        #mintButton { background: #0052FF; font-size: 11px; border-radius: 12px; border: none; color: white; width: 340px; padding: 22px; margin-top: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0, 82, 255, 0.5); }
+        #mintButton:disabled { background: #222; opacity: 0.6; }
     </style>
 </head>
 <body>
 
-    <div class="mt-4 mb-2 text-[#facc15] text-[10px]">SCORE: <span id="score">0</span></div>
+    <div class="mt-4 mb-2 text-[#facc15] text-[10px] uppercase">Score: <span id="score">0</span></div>
     
     <div id="game-box">
         <canvas id="gameCanvas" width="340" height="420"></canvas>
@@ -36,38 +38,33 @@
         <button class="btn-c" onpointerdown="move(1,0)">▶</button>
     </div>
 
-    <div class="mint-area">
-        <button id="mintButton">CLAIM SCORE NFT (BASE)</button>
-        <p id="st" class="text-[7px] mt-4 text-center text-gray-500 uppercase tracking-widest">Powered by Thirdweb Engine</p>
-    </div>
+    <button id="mintButton">MINT NFT ON BASE</button>
+    <p id="st" class="text-[7px] mt-4 text-gray-500 uppercase tracking-widest italic text-center">Confirm in your connected wallet</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
+    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
 
     <script>
+        // --- OYUN MOTORU (TAM EKRAN) ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const ts = 20; 
         let score = 0;
 
-        // --- TAM LABİRENT ---
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1],
+            [1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1],
             [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
-            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
-            [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
-            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
-            [1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
         let p = { x: 1, y: 1, dx: 0, dy: 0, nDx: 0, nDy: 0 };
-        let gs = [{ x: 15, y: 1, c: "#ff0000", dx: -1, dy: 0 }, { x: 1, y: 13, c: "#ffb8ff", dx: 1, dy: 0 }];
+        let gs = [{ x: 15, y: 1, c: "#ff0000", dx: -1, dy: 0 }, { x: 1, y: 7, c: "#ffb8ff", dx: 1, dy: 0 }];
 
         function move(x, y) { p.nDx = x; p.nDy = y; }
         
@@ -75,17 +72,14 @@
             ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
-                    if(world[r][c] === 1) {
-                        ctx.fillStyle = "#0052FF"; ctx.fillRect(c*ts, r*ts, ts-1, ts-1);
-                    } else if(world[r][c] === 0) {
-                        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(c*ts+10, r*ts+10, 2, 0, 7); ctx.fill();
-                    }
+                    if(world[r][c] === 1) { ctx.fillStyle = "#0052FF"; ctx.fillRect(c*ts, r*ts, ts-1, ts-1); }
+                    else if(world[r][c] === 0) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(c*ts+10, r*ts+10, 2, 0, 7); ctx.fill(); }
                 }
             }
             if(world[Math.round(p.y + p.nDy)][Math.round(p.x + p.nDx)] !== 1) { p.dx = p.nDx; p.dy = p.nDy; }
             if(world[Math.round(p.y + p.dy)][Math.round(p.x + p.dx)] !== 1) { p.x += p.dx * 0.1; p.y += p.dy * 0.1; }
             if(world[Math.round(p.y)][Math.round(p.x)] === 0) { world[Math.round(p.y)][Math.round(p.x)] = 2; score += 10; document.getElementById("score").innerText = score; }
-
+            
             gs.forEach(g => {
                 if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) { g.dx *= -1; g.dy *= -1; }
                 g.x += g.dx * 0.05; g.y += g.dy * 0.05;
@@ -97,27 +91,26 @@
             requestAnimationFrame(play);
         }
 
-        // --- MINT FIX: WEB3 MODAL ZORLAMASI ---
+        // --- MINT MEKANİZMASI (STABİL) ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
             btn.disabled = true; btn.innerText = "CONNECTING...";
             try {
-                // Thirdweb SDK Initialize
                 const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
                 
-                // Cüzdan Bağlantısını Zorla
-                await sdk.wallet.connect();
+                // Farcaster cüzdanını bağlamaya çalış
+                await sdk.wallet.connect(); 
                 
                 const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
-                document.getElementById("st").innerText = "CONFIRM MINT IN POPUP!";
+                document.getElementById("st").innerText = "CONFIRMING TRANSACTION...";
                 
-                const tx = await contract.erc721.claim(1);
+                await contract.erc721.claim(1);
                 btn.innerText = "MINTED!"; btn.style.background = "#22c55e";
-                document.getElementById("st").innerText = "SUCCESS! VIEW ON BASESCAN";
+                document.getElementById("st").innerText = "SUCCESS! NFT ADDED TO WALLET";
             } catch (e) {
                 console.error(e);
                 btn.disabled = false; btn.innerText = "MINT FAILED - RETRY";
-                document.getElementById("st").innerText = "ENSURE WALLET IS ON BASE!";
+                document.getElementById("st").innerText = "ERROR: ENSURE BASE NETWORK IS SELECTED";
             }
         };
 
