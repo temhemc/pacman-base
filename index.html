@@ -7,24 +7,26 @@
     <title>Base Pac-Man Arcade</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; }
-        #game-box { border: 4px solid #0052FF; box-shadow: 0 0 20px #0052FF; background: #000; width: 340px; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow: hidden; }
+        #game-box { border: 4px solid #0052FF; box-shadow: 0 0 25px #0052FF; background: #000; width: 340px; margin-top: 10px; }
         canvas { display: block; image-rendering: pixelated; }
         .controls { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; margin-top: 15px; }
         .btn-c { background: #111; border: 2px solid #0052FF; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; touch-action: manipulation; }
         .btn-c:active { background: #0052FF; }
         .mint-area { width: 340px; margin-top: 20px; padding-bottom: 30px; }
-        #mintButton { background: #0052FF; font-size: 12px; cursor: pointer; border-radius: 12px; border: none; color: white; transition: 0.2s; width: 100%; padding: 20px; font-weight: bold; }
-        #mintButton:disabled { background: #333; opacity: 0.6; cursor: not-allowed; }
+        #mintButton { background: #0052FF; font-size: 11px; border-radius: 12px; border: none; color: white; width: 100%; padding: 22px; font-weight: bold; cursor: pointer; }
+        #mintButton:disabled { background: #333; opacity: 0.6; }
     </style>
 </head>
 <body>
 
-    <div class="mt-4 mb-2 text-[#facc15] text-[10px] uppercase tracking-widest">Score: <span id="score">0</span></div>
+    <div class="mt-4 mb-2 text-[#facc15] text-[10px]">SCORE: <span id="score">0</span></div>
     
     <div id="game-box">
-        <canvas id="gameCanvas" width="340" height="400"></canvas>
+        <canvas id="gameCanvas" width="340" height="420"></canvas>
     </div>
 
     <div class="controls">
@@ -35,34 +37,29 @@
     </div>
 
     <div class="mint-area">
-        <button id="mintButton">MINT SCORE NFT (ON BASE)</button>
-        <p id="st" class="text-[7px] mt-4 text-center text-gray-500 uppercase italic">Confirm Transaction in Wallet</p>
+        <button id="mintButton">CLAIM SCORE NFT (BASE)</button>
+        <p id="st" class="text-[7px] mt-4 text-center text-gray-500 uppercase tracking-widest">Powered by Thirdweb Engine</p>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
-    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const ts = 20; // Tile Size
+        const ts = 20; 
         let score = 0;
 
-        // --- TAM EKRAN LABİRENT ---
+        // --- TAM LABİRENT ---
         const world = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
-            [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
-            [1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
-            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1],
-            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
             [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1],
             [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
-            [1,0,1,0,1,1,1,1,0,1,1,1,1,0,1,0,1],
+            [1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -70,20 +67,10 @@
         ];
 
         let p = { x: 1, y: 1, dx: 0, dy: 0, nDx: 0, nDy: 0 };
-        let gs = [
-            { x: 15, y: 1, c: "#ff0000", dx: -1, dy: 0 },
-            { x: 1, y: 15, c: "#ffb8ff", dx: 1, dy: 0 },
-            { x: 15, y: 15, c: "#00ffff", dx: 0, dy: -1 }
-        ];
+        let gs = [{ x: 15, y: 1, c: "#ff0000", dx: -1, dy: 0 }, { x: 1, y: 13, c: "#ffb8ff", dx: 1, dy: 0 }];
 
         function move(x, y) { p.nDx = x; p.nDy = y; }
-        window.addEventListener("keydown", e => {
-            if(e.key === "ArrowUp") move(0,-1);
-            if(e.key === "ArrowDown") move(0,1);
-            if(e.key === "ArrowLeft") move(-1,0);
-            if(e.key === "ArrowRight") move(1,0);
-        });
-
+        
         function play() {
             ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
             for(let r=0; r<world.length; r++) {
@@ -102,30 +89,35 @@
             gs.forEach(g => {
                 if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) { g.dx *= -1; g.dy *= -1; }
                 g.x += g.dx * 0.05; g.y += g.dy * 0.05;
-                if(Math.hypot(p.x-g.x, p.y-g.y) < 0.6) { alert("OUCH!"); location.reload(); }
+                if(Math.hypot(p.x-g.x, p.y-g.y) < 0.6) { location.reload(); }
                 ctx.fillStyle = g.c; ctx.beginPath(); ctx.arc(g.x*ts+10, g.y*ts+10, 8, 0, 7); ctx.fill();
             });
 
-            ctx.fillStyle = "#facc15"; ctx.beginPath();
-            ctx.arc(p.x*ts+10, p.y*ts+10, 9, 0.2*Math.PI, 1.8*Math.PI);
-            ctx.lineTo(p.x*ts+10, p.y*ts+10); ctx.fill();
+            ctx.fillStyle = "#facc15"; ctx.beginPath(); ctx.arc(p.x*ts+10, p.y*ts+10, 9, 0.2*Math.PI, 1.8*Math.PI); ctx.lineTo(p.x*ts+10, p.y*ts+10); ctx.fill();
             requestAnimationFrame(play);
         }
 
-        // --- MINT LOGIC ---
+        // --- MINT FIX: WEB3 MODAL ZORLAMASI ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
-            const st = document.getElementById("st");
-            btn.disabled = true; btn.innerText = "WAITING...";
+            btn.disabled = true; btn.innerText = "CONNECTING...";
             try {
+                // Thirdweb SDK Initialize
                 const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
+                
+                // Cüzdan Bağlantısını Zorla
+                await sdk.wallet.connect();
+                
                 const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
-                st.innerText = "PLEASE CHECK YOUR WALLET!";
-                await contract.erc721.claim(1);
+                document.getElementById("st").innerText = "CONFIRM MINT IN POPUP!";
+                
+                const tx = await contract.erc721.claim(1);
                 btn.innerText = "MINTED!"; btn.style.background = "#22c55e";
+                document.getElementById("st").innerText = "SUCCESS! VIEW ON BASESCAN";
             } catch (e) {
+                console.error(e);
                 btn.disabled = false; btn.innerText = "MINT FAILED - RETRY";
-                st.innerText = "ERROR: ENSURE BASE NETWORK IS SELECTED";
+                document.getElementById("st").innerText = "ENSURE WALLET IS ON BASE!";
             }
         };
 
