@@ -8,144 +8,128 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; touch-action: none; }
-        #canvas-wrapper { border: 4px solid #0052FF; box-shadow: 0 0 25px #0052FF; margin-top: 20px; }
-        canvas { display: block; image-rendering: pixelated; width: 320px; height: 360px; }
-        .controls { display: grid; grid-template-columns: repeat(3, 65px); gap: 10px; margin-top: 20px; }
-        .c-btn { background: #222; border: 2px solid #0052FF; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; }
-        .c-btn:active { background: #0052FF; }
-        .mint-btn { background: #0052FF; font-size: 11px; margin-top: 25px; cursor: pointer; border-radius: 10px; border: none; color: white; transition: 0.2s; }
-        .mint-btn:disabled { background: #333; opacity: 0.6; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; }
+        #game-box { border: 4px solid #0052FF; box-shadow: 0 0 20px #0052FF; background: #000; width: 340px; }
+        canvas { display: block; image-rendering: pixelated; }
+        .controls { display: grid; grid-template-columns: repeat(3, 70px); gap: 10px; margin-top: 15px; }
+        .btn-c { background: #111; border: 2px solid #0052FF; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; touch-action: manipulation; }
+        .btn-c:active { background: #0052FF; }
+        .mint-area { width: 340px; margin-top: 20px; padding-bottom: 30px; }
+        #mintButton { background: #0052FF; font-size: 12px; cursor: pointer; border-radius: 12px; border: none; color: white; transition: 0.2s; width: 100%; padding: 20px; font-weight: bold; }
+        #mintButton:disabled { background: #333; opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <div class="mt-4 text-[#facc15] text-[10px]">SCORE: <span id="score">0</span></div>
+    <div class="mt-4 mb-2 text-[#facc15] text-[10px] uppercase tracking-widest">Score: <span id="score">0</span></div>
     
-    <div id="canvas-wrapper">
-        <canvas id="gameCanvas" width="480" height="540"></canvas>
+    <div id="game-box">
+        <canvas id="gameCanvas" width="340" height="400"></canvas>
     </div>
 
     <div class="controls">
-        <div></div><button class="c-btn" onpointerdown="setDir(0,-1)">▲</button><div></div>
-        <button class="c-btn" onpointerdown="setDir(-1,0)">◀</button>
-        <button class="c-btn" onpointerdown="setDir(0,1)">▼</button>
-        <button class="c-btn" onpointerdown="setDir(1,0)">▶</button>
+        <div></div><button class="btn-c" onpointerdown="move(0,-1)">▲</button><div></div>
+        <button class="btn-c" onpointerdown="move(-1,0)">◀</button>
+        <button class="btn-c" onpointerdown="move(0,1)">▼</button>
+        <button class="btn-c" onpointerdown="move(1,0)">▶</button>
     </div>
 
-    <div class="w-full max-w-[320px] px-4 pb-10">
-        <button id="mintButton" class="mint-btn w-full py-5 font-bold shadow-2xl uppercase">Mint NFT (On Base)</button>
-        <p id="status" class="text-[7px] mt-4 text-center text-gray-400 italic">Confirmed: Contract 0xA028...e7cC</p>
+    <div class="mint-area">
+        <button id="mintButton">MINT SCORE NFT (ON BASE)</button>
+        <p id="st" class="text-[7px] mt-4 text-center text-gray-500 uppercase italic">Confirm Transaction in Wallet</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
-    <script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
     <script>
-        // --- OYUN MOTORU ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const ts = 30;
+        const ts = 20; // Tile Size
         let score = 0;
-        let isGameOver = false;
 
+        // --- TAM EKRAN LABİRENT ---
         const world = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1],
-            [1,0,1,0,1,0,1,1,1,0,1,0,1,1,0,1],
-            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,1],
-            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
-            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
+            [1,0,1,0,1,1,1,1,0,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        let p = { x: 1, y: 1, dx: 0, dy: 0, nextDx: 0, nextDy: 0 };
-        let ghosts = [
-            { x: 14, y: 1, c: "#ff0000", dx: -1, dy: 0 },
-            { x: 1, y: 5, c: "#ffb8ff", dx: 1, dy: 0 }
+        let p = { x: 1, y: 1, dx: 0, dy: 0, nDx: 0, nDy: 0 };
+        let gs = [
+            { x: 15, y: 1, c: "#ff0000", dx: -1, dy: 0 },
+            { x: 1, y: 15, c: "#ffb8ff", dx: 1, dy: 0 },
+            { x: 15, y: 15, c: "#00ffff", dx: 0, dy: -1 }
         ];
 
-        function setDir(x, y) { p.nextDx = x; p.nextDy = y; }
-        
-        function game() {
-            if(isGameOver) return;
+        function move(x, y) { p.nDx = x; p.nDy = y; }
+        window.addEventListener("keydown", e => {
+            if(e.key === "ArrowUp") move(0,-1);
+            if(e.key === "ArrowDown") move(0,1);
+            if(e.key === "ArrowLeft") move(-1,0);
+            if(e.key === "ArrowRight") move(1,0);
+        });
+
+        function play() {
             ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
-
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
                     if(world[r][c] === 1) {
-                        ctx.fillStyle = "#0052FF"; ctx.fillRect(c*ts, r*ts, ts-2, ts-2);
+                        ctx.fillStyle = "#0052FF"; ctx.fillRect(c*ts, r*ts, ts-1, ts-1);
                     } else if(world[r][c] === 0) {
-                        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(c*ts+ts/2, r*ts+ts/2, 3, 0, 7); ctx.fill();
+                        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(c*ts+10, r*ts+10, 2, 0, 7); ctx.fill();
                     }
                 }
             }
+            if(world[Math.round(p.y + p.nDy)][Math.round(p.x + p.nDx)] !== 1) { p.dx = p.nDx; p.dy = p.nDy; }
+            if(world[Math.round(p.y + p.dy)][Math.round(p.x + p.dx)] !== 1) { p.x += p.dx * 0.1; p.y += p.dy * 0.1; }
+            if(world[Math.round(p.y)][Math.round(p.x)] === 0) { world[Math.round(p.y)][Math.round(p.x)] = 2; score += 10; document.getElementById("score").innerText = score; }
 
-            if(world[Math.round(p.y + p.nextDy)][Math.round(p.x + p.nextDx)] !== 1) {
-                p.dx = p.nextDx; p.dy = p.nextDy;
-            }
-            if(world[Math.round(p.y + p.dy)][Math.round(p.x + p.dx)] !== 1) {
-                p.x += p.dx * 0.1; p.y += p.dy * 0.1;
-            }
-
-            if(world[Math.round(p.y)][Math.round(p.x)] === 0) {
-                world[Math.round(p.y)][Math.round(p.x)] = 2; score += 10;
-                document.getElementById("score").innerText = score;
-            }
-
-            ghosts.forEach(g => {
-                if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) {
-                    g.dx *= -1; g.dy *= -1;
-                }
+            gs.forEach(g => {
+                if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) { g.dx *= -1; g.dy *= -1; }
                 g.x += g.dx * 0.05; g.y += g.dy * 0.05;
-                
-                // GHOST COLLISION (Ölüm Mekanizması)
-                let d = Math.hypot(p.x - g.x, p.y - g.y);
-                if(d < 0.5) { isGameOver = true; alert("BOOM! SCORE: " + score); location.reload(); }
-
-                ctx.fillStyle = g.c; ctx.beginPath(); ctx.arc(g.x*ts+ts/2, g.y*ts+ts/2, 12, 0, 7); ctx.fill();
+                if(Math.hypot(p.x-g.x, p.y-g.y) < 0.6) { alert("OUCH!"); location.reload(); }
+                ctx.fillStyle = g.c; ctx.beginPath(); ctx.arc(g.x*ts+10, g.y*ts+10, 8, 0, 7); ctx.fill();
             });
 
             ctx.fillStyle = "#facc15"; ctx.beginPath();
-            ctx.arc(p.x*ts+ts/2, p.y*ts+ts/2, 13, 0.2*Math.PI, 1.8*Math.PI);
-            ctx.lineTo(p.x*ts+ts/2, p.y*ts+ts/2); ctx.fill();
-
-            requestAnimationFrame(game);
+            ctx.arc(p.x*ts+10, p.y*ts+10, 9, 0.2*Math.PI, 1.8*Math.PI);
+            ctx.lineTo(p.x*ts+10, p.y*ts+10); ctx.fill();
+            requestAnimationFrame(play);
         }
 
-        // --- GARANTİLİ MINT MEKANİZMASI ---
-        const CLIENT_ID = "c1fd1c7e41a57fd4f1776293db6fb49e";
-        const CONTRACT_ADDR = "0xA0282E2E89868661643668866E5363e7cC";
-
+        // --- MINT LOGIC ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
-            const status = document.getElementById("status");
-            btn.disabled = true;
-            btn.innerText = "WAITING WALLET...";
-            status.innerText = "Check your Metamask/Coinbase Wallet!";
-
+            const st = document.getElementById("st");
+            btn.disabled = true; btn.innerText = "WAITING...";
             try {
-                // Farcaster Frame üzerinden mi açılıyor kontrol et
-                const sdk = new ThirdwebSDK("base", { clientId: CLIENT_ID });
-                const contract = await sdk.getContract(CONTRACT_ADDR);
-                
-                // MINT İŞLEMİ
-                const tx = await contract.erc721.claim(1);
-                console.log("Tx Success:", tx);
-                
-                btn.innerText = "SUCCESSFULLY MINTED!";
-                btn.style.background = "#22c55e";
-                status.innerText = "View NFT on Basescan!";
-            } catch (err) {
-                console.error("Mint Hatası:", err);
-                btn.disabled = false;
-                btn.innerText = "MINT FAILED - RETRY";
-                status.innerText = "Error: Ensure you are on Base Network!";
+                const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
+                const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
+                st.innerText = "PLEASE CHECK YOUR WALLET!";
+                await contract.erc721.claim(1);
+                btn.innerText = "MINTED!"; btn.style.background = "#22c55e";
+            } catch (e) {
+                btn.disabled = false; btn.innerText = "MINT FAILED - RETRY";
+                st.innerText = "ERROR: ENSURE BASE NETWORK IS SELECTED";
             }
         };
 
-        window.onload = () => { game(); if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready(); };
+        window.onload = () => { play(); if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready(); };
     </script>
 </body>
 </html>
