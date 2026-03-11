@@ -4,29 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
-    <title>Base Pac-Man Professional</title>
+    <title>Base Pac-Man Mega Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; touch-action: none; }
-        canvas { border: 4px solid #0052FF; box-shadow: 0 0 20px #0052FF; background: #000; }
-        .ui-panel { width: 340px; margin-top: 15px; text-align: center; }
-        .mint-btn { background: #0052FF; font-size: 10px; border-radius: 8px; transition: 0.2s; border: none; color: white; cursor: pointer; }
-        .mint-btn:hover { background: #003db3; transform: scale(1.02); }
-        .mint-btn:disabled { background: #333; opacity: 0.7; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding-top: 20px; }
+        #canvas-wrapper { border: 6px solid #0052FF; box-shadow: 0 0 40px rgba(0, 82, 255, 0.7); position: relative; background: #000; }
+        canvas { display: block; image-rendering: pixelated; }
+        .ui { width: 100%; max-width: 600px; margin-top: 20px; text-align: center; padding-bottom: 40px; }
+        .mint-btn { background: #0052FF; font-size: 14px; border-radius: 12px; transition: 0.2s; color: white; border: none; cursor: pointer; }
+        .mint-btn:hover:not(:disabled) { background: #003db3; transform: scale(1.05); }
+        .mint-btn:disabled { background: #333; opacity: 0.8; }
+        #scoreDisplay { color: #facc15; font-size: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="mb-2 text-sm text-[#facc15]">SCORE: <span id="score">0</span></div>
+    <div class="mb-4 uppercase">Score: <span id="scoreDisplay">0</span></div>
     
-    <canvas id="gameCanvas" width="340" height="340"></canvas>
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas" width="600" height="720"></canvas>
+    </div>
 
-    <div class="ui-panel">
-        <button id="mintButton" class="mint-btn w-full py-4 font-bold shadow-xl uppercase">
+    <div class="ui px-6">
+        <button id="mintButton" class="mint-btn w-full py-6 font-bold shadow-2xl uppercase">
             Mint Score NFT
         </button>
-        <p class="text-[7px] mt-2 text-gray-500 uppercase tracking-widest">Base Mainnet • Farcaster Edition</p>
+        <p id="status" class="text-[10px] mt-4 text-gray-500 uppercase tracking-widest">Base Network Verified • High Resolution</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
@@ -35,97 +39,108 @@
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const scoreEl = document.getElementById("score");
-        
-        // --- OYUN AYARLARI ---
-        const size = 20;
+        const tileSize = 40; // Eskiden 20'ydi, ölçek 2 katı + canvas genişliği ile devasa görünecek
         let score = 0;
-        let pacman = { x: 1, y: 1, dx: 0, dy: 0, nextDx: 0, nextDy: 0 };
-        
-        const map = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,1,0,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,0,1,1,0,1,1,1,1,0,1,1,1,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+        // --- DEV LABİRENT ---
+        const world = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,0,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,0,1,1,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,0,1,1,1,1,1,0,1],
+            [1,0,0,1,0,0,0,0,0,0,0,0,1,0,1],
+            [1,1,0,1,1,1,0,1,1,1,1,0,1,1,1],
+            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,0,1,1,1,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        // --- KONTROLLER ---
+        let player = { x: 1, y: 1, dx: 0, dy: 0, mouth: 0 };
+        let ghosts = [
+            { x: 13, y: 1, c: "#ff0000", dx: -0.04, dy: 0 },
+            { x: 1, y: 13, c: "#ffb8ff", dx: 0.04, dy: 0 },
+            { x: 13, y: 13, c: "#00ffff", dx: 0, dy: -0.04 }
+        ];
+
         window.addEventListener("keydown", e => {
-            if(e.key === "ArrowUp") { pacman.nextDx = 0; pacman.nextDy = -1; }
-            if(e.key === "ArrowDown") { pacman.nextDx = 0; pacman.nextDy = 1; }
-            if(e.key === "ArrowLeft") { pacman.nextDx = -1; pacman.nextDy = 0; }
-            if(e.key === "ArrowRight") { pacman.nextDx = 1; pacman.nextDy = 0; }
+            if(e.key === "ArrowUp") { player.dx=0; player.dy=-1; }
+            if(e.key === "ArrowDown") { player.dx=0; player.dy=1; }
+            if(e.key === "ArrowLeft") { player.dx=-1; player.dy=0; }
+            if(e.key === "ArrowRight") { player.dx=1; player.dy=0; }
         });
 
-        function draw() {
+        function engine() {
             ctx.fillStyle = "black";
-            ctx.fillRect(0,0,canvas.width, canvas.height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Labirent ve Yem Çizimi
-            for(let row=0; row<map.length; row++) {
-                for(let col=0; col<map[row].length; col++) {
-                    if(map[row][col] === 1) {
-                        ctx.fillStyle = "#0052FF"; // Base Blue Walls
-                        ctx.fillRect(col*size, row*size, size-2, size-2);
-                    } else if(map[row][col] === 0) {
-                        ctx.fillStyle = "white";
-                        ctx.beginPath();
-                        ctx.arc(col*size + size/2, row*size + size/2, 2, 0, Math.PI*2);
-                        ctx.fill();
+            // Labirent Çizimi
+            for(let r=0; r<world.length; r++) {
+                for(let c=0; c<world[r].length; c++) {
+                    let lx = c * tileSize, ly = r * tileSize;
+                    if(world[r][c] === 1) {
+                        ctx.fillStyle = "#0052FF";
+                        ctx.fillRect(lx, ly, tileSize-2, tileSize-2);
+                    } else if(world[r][c] === 0) {
+                        ctx.fillStyle = "#fff";
+                        ctx.beginPath(); ctx.arc(lx+tileSize/2, ly+tileSize/2, 3, 0, 7); ctx.fill();
                     }
                 }
             }
 
-            // Hareket Mantığı
-            if(map[Math.round(pacman.y + pacman.nextDy)][Math.round(pacman.x + pacman.nextDx)] !== 1) {
-                pacman.dx = pacman.nextDx;
-                pacman.dy = pacman.nextDy;
+            // Pacman Hareket
+            if(world[Math.round(player.y + player.dy)][Math.round(player.x + player.dx)] !== 1) {
+                player.x += player.dx * 0.1; player.y += player.dy * 0.1;
             }
-            if(map[Math.round(pacman.y + pacman.dy)][Math.round(pacman.x + pacman.dx)] !== 1) {
-                pacman.x += pacman.dx * 0.1;
-                pacman.y += pacman.dy * 0.1;
-            }
-
-            // Yem yeme ve Skor
-            let rX = Math.round(pacman.x), rY = Math.round(pacman.y);
-            if(map[rY][rX] === 0) {
-                map[rY][rX] = 2;
-                score += 10;
-                scoreEl.innerText = score;
+            
+            // Skor
+            if(world[Math.round(player.y)][Math.round(player.x)] === 0) {
+                world[Math.round(player.y)][Math.round(player.x)] = 2;
+                score += 10; document.getElementById("scoreDisplay").innerText = score;
             }
 
-            // Pacman Çizimi
+            // Hayaletler
+            ghosts.forEach(g => {
+                if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) {
+                    g.dx *= -1; g.dy = (g.dx === 0) ? g.dy * -1 : 0;
+                }
+                g.x += g.dx; g.y += g.dy;
+                ctx.fillStyle = g.c;
+                ctx.beginPath(); ctx.arc(g.x*tileSize+tileSize/2, g.y*tileSize+tileSize/2, 16, 0, 7); ctx.fill();
+            });
+
+            // Player Çizim
+            player.mouth = Math.abs(Math.sin(Date.now() / 150)) * 0.2;
             ctx.fillStyle = "#facc15";
             ctx.beginPath();
-            ctx.arc(pacman.x*size + size/2, pacman.y*size + size/2, size/1.5, 0.2*Math.PI, 1.8*Math.PI);
-            ctx.lineTo(pacman.x*size + size/2, pacman.y*size + size/2);
-            ctx.fill();
+            ctx.arc(player.x*tileSize+tileSize/2, player.y*tileSize+tileSize/2, 18, player.mouth*Math.PI, (2-player.mouth)*Math.PI);
+            ctx.lineTo(player.x*tileSize+tileSize/2, player.y*tileSize+tileSize/2); ctx.fill();
 
-            requestAnimationFrame(draw);
+            requestAnimationFrame(engine);
         }
 
-        // --- SDK & MINT ---
-        window.onload = async () => {
-            draw();
-            if (window.farcaster?.sdk) await window.farcaster.sdk.actions.ready();
-        };
-
+        // --- MINT ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
-            btn.disabled = true; btn.innerText = "Processing...";
+            btn.disabled = true; btn.innerText = "Connecting Wallet...";
             try {
-                const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
-                const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
+                const thirdweb = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
+                const contract = await thirdweb.getContract("0xA0282E2E89868661643668866E5363e7cC");
                 await contract.erc721.claim(1);
-                btn.innerText = "Success!"; btn.style.background = "#22c55e";
-            } catch (e) { btn.disabled = false; btn.innerText = "Retry Mint"; }
+                btn.innerText = "Success! NFT Claimed"; btn.style.background = "#22c55e";
+            } catch (e) {
+                btn.disabled = false; btn.innerText = "Retry Mint";
+            }
+        };
+
+        window.onload = () => {
+            engine();
+            if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready();
         };
     </script>
 </body>
