@@ -5,131 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
     <title>Base Pac-Man | Professional Mini-App</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
-
     <style>
-        body {
-            background-color: #000;
-            color: #fff;
-            font-family: 'Press Start 2P', cursive;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-        #game-container {
-            position: relative;
-            border: 4px solid #0052FF; /* Base Blue */
-            box-shadow: 0 0 20px rgba(0, 82, 255, 0.5);
-        }
-        canvas { display: block; }
-        .ui-panel {
-            margin-top: 20px;
-            text-align: center;
-            width: 100%;
-            max-width: 400px;
-        }
-        #mintButton {
-            background: #0052FF;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            font-size: 10px;
-        }
-        #mintButton:hover {
-            background: #003db3;
-            transform: scale(1.05);
-        }
-        #statusText { font-size: 8px; margin-top: 10px; color: #aaa; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        #game-container { border: 4px solid #0052FF; position: relative; width: 340px; height: 400px; background: #000; }
+        #mintButton { background: #0052FF; font-size: 12px; }
+        #mintButton:disabled { background: #333; cursor: not-allowed; }
+        .score-board { color: #facc15; font-size: 14px; margin: 15px 0; }
     </style>
 </head>
 <body>
 
+    <div class="score-board">SCORE: <span id="score">0</span></div>
+    
     <div id="game-container">
-        <canvas id="pacmanCanvas" width="350" height="400"></canvas>
+        <canvas id="gameCanvas" width="340" height="400"></canvas>
     </div>
 
-    <div class="ui-panel px-4">
-        <div class="mb-4 text-sm text-blue-400">SCORE: <span id="scoreDisplay">0</span></div>
-        
-        <button id="mintButton" class="w-full py-4 rounded-lg font-bold shadow-lg mb-2">
+    <div class="w-full max-w-[340px] mt-6 px-4 text-center">
+        <button id="mintButton" class="w-full py-4 rounded-xl font-bold shadow-2xl active:scale-95 transition-transform">
             MINT SCORE NFT
         </button>
-        <p id="statusText italic">Base Network | Powered by Thirdweb</p>
+        <p id="status" class="text-[8px] mt-4 text-gray-500 uppercase tracking-widest">Base Network Verified</p>
     </div>
 
     <script>
-        // --- 1. FARCASTER SDK BAŞLATMA (Siyah Ekran Çözümü) ---
+        // --- SDK BAŞLATMA ---
         window.addEventListener('load', async () => {
-            try {
-                if (window.farcaster?.sdk) {
-                    await window.farcaster.sdk.actions.ready();
-                    console.log("Farcaster SDK Ready");
-                }
-            } catch (error) {
-                console.error("SDK Error:", error);
+            if (window.farcaster?.sdk) {
+                await window.farcaster.sdk.actions.ready();
             }
         });
 
-        // --- 2. THIRDWEB MINT AYARLARI ---
         const CLIENT_ID = "c1fd1c7e41a57fd4f1776293db6fb49e";
         const CONTRACT_ADDR = "0xA0282E2E89868661643668866E5363e7cC";
-
         const sdk = new ThirdwebSDK("base", { clientId: CLIENT_ID });
 
+        // --- MINT FONKSİYONU ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
-            const status = document.getElementById("statusText");
-            
+            const status = document.getElementById("status");
             btn.disabled = true;
-            btn.innerText = "CLAIMING...";
-            status.innerText = "Check your wallet for confirmation...";
-
+            btn.innerText = "WAITING FOR WALLET...";
             try {
                 const contract = await sdk.getContract(CONTRACT_ADDR);
                 await contract.erc721.claim(1);
-                
-                btn.innerText = "NFT CLAIMED!";
-                status.innerText = "Success! View it in your wallet.";
-                btn.style.background = "#22c55e"; // Green
+                btn.innerText = "NFT MINTED!";
+                btn.style.background = "#16a34a";
+                status.innerText = "SUCCESSFUL ON BASE!";
             } catch (err) {
                 console.error(err);
                 btn.disabled = false;
-                btn.innerText = "MINT FAILED - TRY AGAIN";
-                status.innerText = "Make sure you're on Base & have gas.";
+                btn.innerText = "MINT FAILED - RETRY";
+                status.innerText = "ERROR: CHECK WALLET CONNECTION";
             }
         };
 
-        // --- 3. BASIC PAC-MAN OYUN KODU (Örnek Mantık) ---
-        const canvas = document.getElementById('pacmanCanvas');
-        const ctx = canvas.getContext('2d');
+        // --- GERÇEK OYUN MANTIĞI (BASİTLEŞTİRİLMİŞ) ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
         let score = 0;
+        let pacman = { x: 170, y: 300, r: 15, angle: 0.2 };
 
-        function drawGame() {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Basit Pac-man görseli
-            ctx.fillStyle = "yellow";
+            // Labirent Duvarları (Temsili)
+            ctx.strokeStyle = "#0052FF";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, 320, 380);
+
+            // Pac-man
+            ctx.fillStyle = "#facc15";
             ctx.beginPath();
-            ctx.arc(175, 200, 20, 0.2 * Math.PI, 1.8 * Math.PI);
-            ctx.lineTo(175, 200);
+            ctx.arc(pacman.x, pacman.y, pacman.r, pacman.angle * Math.PI, (2 - pacman.angle) * Math.PI);
+            ctx.lineTo(pacman.x, pacman.y);
             ctx.fill();
 
-            // Skor artırma simülasyonu
-            score += Math.floor(Math.random() * 2);
-            document.getElementById('scoreDisplay').innerText = score;
-            
-            requestAnimationFrame(drawGame);
+            // Yemler
+            ctx.fillStyle = "#fff";
+            for(let i=0; i<5; i++) {
+                ctx.beginPath();
+                ctx.arc(50 + (i*60), 100, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            score++;
+            document.getElementById("score").innerText = score;
+            requestAnimationFrame(draw);
         }
-        drawGame();
+        draw();
     </script>
 </body>
 </html>
