@@ -4,33 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
-    <title>Base Pac-Man Mega Edition</title>
+    <title>Base Pac-Man Arcade</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding-top: 20px; }
-        #canvas-wrapper { border: 6px solid #0052FF; box-shadow: 0 0 40px rgba(0, 82, 255, 0.7); position: relative; background: #000; }
-        canvas { display: block; image-rendering: pixelated; }
-        .ui { width: 100%; max-width: 600px; margin-top: 20px; text-align: center; padding-bottom: 40px; }
-        .mint-btn { background: #0052FF; font-size: 14px; border-radius: 12px; transition: 0.2s; color: white; border: none; cursor: pointer; }
-        .mint-btn:hover:not(:disabled) { background: #003db3; transform: scale(1.05); }
-        .mint-btn:disabled { background: #333; opacity: 0.8; }
-        #scoreDisplay { color: #facc15; font-size: 20px; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; touch-action: none; }
+        #canvas-wrapper { border: 4px solid #0052FF; box-shadow: 0 0 25px #0052FF; margin-top: 20px; }
+        canvas { display: block; image-rendering: pixelated; width: 320px; height: 360px; }
+        .controls { display: grid; grid-template-columns: repeat(3, 65px); gap: 10px; margin-top: 20px; }
+        .c-btn { background: #222; border: 2px solid #0052FF; height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; }
+        .c-btn:active { background: #0052FF; }
+        .mint-btn { background: #0052FF; font-size: 11px; margin-top: 25px; cursor: pointer; border-radius: 10px; border: none; color: white; transition: 0.2s; }
+        .mint-btn:disabled { background: #333; opacity: 0.6; }
     </style>
 </head>
 <body>
 
-    <div class="mb-4 uppercase">Score: <span id="scoreDisplay">0</span></div>
+    <div class="mt-4 text-[#facc15] text-[10px]">SCORE: <span id="score">0</span></div>
     
     <div id="canvas-wrapper">
-        <canvas id="gameCanvas" width="600" height="720"></canvas>
+        <canvas id="gameCanvas" width="480" height="540"></canvas>
     </div>
 
-    <div class="ui px-6">
-        <button id="mintButton" class="mint-btn w-full py-6 font-bold shadow-2xl uppercase">
-            Mint Score NFT
-        </button>
-        <p id="status" class="text-[10px] mt-4 text-gray-500 uppercase tracking-widest">Base Network Verified • High Resolution</p>
+    <div class="controls">
+        <div></div><button class="c-btn" onpointerdown="setDir(0,-1)">▲</button><div></div>
+        <button class="c-btn" onpointerdown="setDir(-1,0)">◀</button>
+        <button class="c-btn" onpointerdown="setDir(0,1)">▼</button>
+        <button class="c-btn" onpointerdown="setDir(1,0)">▶</button>
+    </div>
+
+    <div class="w-full max-w-[320px] px-4 pb-10">
+        <button id="mintButton" class="mint-btn w-full py-5 font-bold shadow-2xl uppercase">Mint Score NFT</button>
+        <p id="status" class="text-[7px] mt-4 text-center text-gray-500 italic uppercase">On-Chain Interaction Enabled</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
@@ -39,109 +44,108 @@
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const tileSize = 40; // Eskiden 20'ydi, ölçek 2 katı + canvas genişliği ile devasa görünecek
+        const ts = 30; // Tile Size
         let score = 0;
+        let isGameOver = false;
 
-        // --- DEV LABİRENT ---
         const world = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,0,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,1,0,0,0,1,0,0,0,0,1],
-            [1,1,1,1,0,1,1,1,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,0,1,1,1,1,1,0,1],
-            [1,0,0,1,0,0,0,0,0,0,0,0,1,0,1],
-            [1,1,0,1,1,1,0,1,1,1,1,0,1,1,1],
-            [1,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,0,1,1,1,1,0,1],
-            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
-            [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,1,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,1,0,0,1],
+            [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,0,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        let player = { x: 1, y: 1, dx: 0, dy: 0, mouth: 0 };
+        let p = { x: 1, y: 1, dx: 0, dy: 0, nextDx: 0, nextDy: 0 };
         let ghosts = [
-            { x: 13, y: 1, c: "#ff0000", dx: -0.04, dy: 0 },
-            { x: 1, y: 13, c: "#ffb8ff", dx: 0.04, dy: 0 },
-            { x: 13, y: 13, c: "#00ffff", dx: 0, dy: -0.04 }
+            { x: 14, y: 1, c: "#ff0000", dx: -1, dy: 0 },
+            { x: 1, y: 7, c: "#ffb8ff", dx: 1, dy: 0 },
+            { x: 14, y: 7, c: "#00ffff", dx: 0, dy: -1 }
         ];
 
+        function setDir(x, y) { p.nextDx = x; p.nextDy = y; }
         window.addEventListener("keydown", e => {
-            if(e.key === "ArrowUp") { player.dx=0; player.dy=-1; }
-            if(e.key === "ArrowDown") { player.dx=0; player.dy=1; }
-            if(e.key === "ArrowLeft") { player.dx=-1; player.dy=0; }
-            if(e.key === "ArrowRight") { player.dx=1; player.dy=0; }
+            if(e.key === "ArrowUp") setDir(0,-1);
+            if(e.key === "ArrowDown") setDir(0,1);
+            if(e.key === "ArrowLeft") setDir(-1,0);
+            if(e.key === "ArrowRight") setDir(1,0);
         });
 
-        function engine() {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function game() {
+            if(isGameOver) return;
+            ctx.fillStyle = "black"; ctx.fillRect(0,0,canvas.width,canvas.height);
 
-            // Labirent Çizimi
             for(let r=0; r<world.length; r++) {
                 for(let c=0; c<world[r].length; c++) {
-                    let lx = c * tileSize, ly = r * tileSize;
                     if(world[r][c] === 1) {
-                        ctx.fillStyle = "#0052FF";
-                        ctx.fillRect(lx, ly, tileSize-2, tileSize-2);
+                        ctx.fillStyle = "#0052FF"; ctx.fillRect(c*ts, r*ts, ts-2, ts-2);
                     } else if(world[r][c] === 0) {
-                        ctx.fillStyle = "#fff";
-                        ctx.beginPath(); ctx.arc(lx+tileSize/2, ly+tileSize/2, 3, 0, 7); ctx.fill();
+                        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(c*ts+ts/2, r*ts+ts/2, 3, 0, 7); ctx.fill();
                     }
                 }
             }
 
-            // Pacman Hareket
-            if(world[Math.round(player.y + player.dy)][Math.round(player.x + player.dx)] !== 1) {
-                player.x += player.dx * 0.1; player.y += player.dy * 0.1;
+            // Pacman Move & Wall Collision
+            if(world[Math.round(p.y + p.nextDy)][Math.round(p.x + p.nextDx)] !== 1) {
+                p.dx = p.nextDx; p.dy = p.nextDy;
             }
-            
-            // Skor
-            if(world[Math.round(player.y)][Math.round(player.x)] === 0) {
-                world[Math.round(player.y)][Math.round(player.x)] = 2;
-                score += 10; document.getElementById("scoreDisplay").innerText = score;
+            if(world[Math.round(p.y + p.dy)][Math.round(p.x + p.dx)] !== 1) {
+                p.x += p.dx * 0.1; p.y += p.dy * 0.1;
             }
 
-            // Hayaletler
+            // Score Logic
+            if(world[Math.round(p.y)][Math.round(p.x)] === 0) {
+                world[Math.round(p.y)][Math.round(p.x)] = 2; score += 10;
+                document.getElementById("score").innerText = score;
+            }
+
+            // Ghost Logic & Collision
             ghosts.forEach(g => {
                 if(world[Math.round(g.y + g.dy)][Math.round(g.x + g.dx)] === 1) {
-                    g.dx *= -1; g.dy = (g.dx === 0) ? g.dy * -1 : 0;
+                    g.dx *= -1; g.dy *= -1;
                 }
-                g.x += g.dx; g.y += g.dy;
-                ctx.fillStyle = g.c;
-                ctx.beginPath(); ctx.arc(g.x*tileSize+tileSize/2, g.y*tileSize+tileSize/2, 16, 0, 7); ctx.fill();
+                g.x += g.dx * 0.05; g.y += g.dy * 0.05;
+
+                // Çarpışma Kontrolü (Collision)
+                let dist = Math.hypot(p.x - g.x, p.y - g.y);
+                if(dist < 0.6) {
+                    isGameOver = true;
+                    alert("GAME OVER! SCORE: " + score);
+                    location.reload();
+                }
+
+                ctx.fillStyle = g.c; ctx.beginPath(); ctx.arc(g.x*ts+ts/2, g.y*ts+ts/2, 12, 0, 7); ctx.fill();
             });
 
-            // Player Çizim
-            player.mouth = Math.abs(Math.sin(Date.now() / 150)) * 0.2;
-            ctx.fillStyle = "#facc15";
-            ctx.beginPath();
-            ctx.arc(player.x*tileSize+tileSize/2, player.y*tileSize+tileSize/2, 18, player.mouth*Math.PI, (2-player.mouth)*Math.PI);
-            ctx.lineTo(player.x*tileSize+tileSize/2, player.y*tileSize+tileSize/2); ctx.fill();
+            ctx.fillStyle = "#facc15"; ctx.beginPath();
+            ctx.arc(p.x*ts+ts/2, p.y*ts+ts/2, 13, 0.2*Math.PI, 1.8*Math.PI);
+            ctx.lineTo(p.x*ts+ts/2, p.y*ts+ts/2); ctx.fill();
 
-            requestAnimationFrame(engine);
+            requestAnimationFrame(game);
         }
 
-        // --- MINT ---
+        // --- MINT FIX ---
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
-            btn.disabled = true; btn.innerText = "Connecting Wallet...";
+            const status = document.getElementById("status");
+            btn.disabled = true; btn.innerText = "CHECKING WALLET...";
             try {
-                const thirdweb = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
-                const contract = await thirdweb.getContract("0xA0282E2E89868661643668866E5363e7cC");
+                const sdk = new ThirdwebSDK("base", { clientId: "c1fd1c7e41a57fd4f1776293db6fb49e" });
+                const contract = await sdk.getContract("0xA0282E2E89868661643668866E5363e7cC");
+                status.innerText = "PLEASE CONFIRM IN YOUR WALLET";
                 await contract.erc721.claim(1);
-                btn.innerText = "Success! NFT Claimed"; btn.style.background = "#22c55e";
+                btn.innerText = "NFT CLAIMED!"; btn.style.background = "#22c55e";
             } catch (e) {
-                btn.disabled = false; btn.innerText = "Retry Mint";
+                btn.disabled = false; btn.innerText = "RETRY MINT";
+                status.innerText = "ERROR: ENSURE YOU ARE ON BASE NETWORK";
             }
         };
 
-        window.onload = () => {
-            engine();
-            if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready();
-        };
+        window.onload = () => { game(); if(window.farcaster?.sdk) window.farcaster.sdk.actions.ready(); };
     </script>
 </body>
 </html>
