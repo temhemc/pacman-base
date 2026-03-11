@@ -4,99 +4,137 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
-    <title>Base Pac-Man</title>
+    <title>Base Pac-Man Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
-        #game-container { border: 4px solid #0052FF; position: relative; background: #000; box-shadow: 0 0 20px #0052FF; line-height: 0; }
-        canvas { display: block; background: #000; }
-        .mint-btn { background: #0052FF; font-size: 10px; cursor: pointer; transition: 0.2s; border-radius: 8px; }
-        .mint-btn:hover { background: #003db3; }
-        .mint-btn:disabled { background: #333; cursor: not-allowed; }
+        #game-container { border: 4px solid #0052FF; background: #000; box-shadow: 0 0 25px rgba(0, 82, 255, 0.5); position: relative; }
+        canvas { display: block; }
+        .mint-btn { background: #0052FF; font-size: 10px; cursor: pointer; border-radius: 8px; transition: 0.2s; border: none; }
+        .mint-btn:hover:not(:disabled) { background: #003db3; transform: scale(1.02); }
+        .mint-btn:disabled { background: #333; opacity: 0.7; }
     </style>
 </head>
 <body>
 
-    <div class="mb-4 text-[#facc15] text-sm">SCORE: <span id="scoreDisplay">0</span></div>
+    <div class="mb-4 text-sm text-[#facc15]">SCORE: <span id="scoreDisplay">0</span></div>
     
     <div id="game-container">
-        <canvas id="pacmanCanvas" width="320" height="320"></canvas>
+        <canvas id="pacmanCanvas" width="340" height="340"></canvas>
     </div>
 
-    <div class="mt-6 w-[320px] px-4 text-center">
-        <button id="mintButton" class="mint-btn w-full py-4 font-bold shadow-lg uppercase">
+    <div class="mt-6 w-[340px] px-4">
+        <button id="mintButton" class="mint-btn w-full py-5 font-bold shadow-2xl uppercase text-white">
             MINT SCORE NFT
         </button>
-        <p id="status" class="text-[7px] mt-4 text-gray-500 italic uppercase">Base Network Verified</p>
+        <p id="statusMsg" class="text-[7px] mt-4 text-center text-gray-500 uppercase tracking-widest">Base Mainnet Edition</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
     <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
 
     <script>
-        // --- 1. MOTOR VE ÇİZİM ---
         const canvas = document.getElementById("pacmanCanvas");
         const ctx = canvas.getContext("2d");
         let score = 0;
-        let x = 160, y = 160, dir = 1;
 
-        function startEngine() {
+        // --- 1. LABİRENT VE KARAKTER ÇİZİMLERİ ---
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        let pacman = { x: 30, y: 30, dir: 1, mouth: 0 };
+        let ghosts = [
+            { x: 280, y: 30, color: "#ff0000", speed: 1 }, // Red
+            { x: 280, y: 280, color: "#ffb8ff", speed: 1.2 } // Pink
+        ];
+
+        function drawMap() {
+            ctx.strokeStyle = "#0052FF"; // Base Blue Lines
+            ctx.lineWidth = 2;
+            for(let i=0; i<10; i++) {
+                ctx.strokeRect(10 + i*32, 10, 32, 320);
+                ctx.strokeRect(10, 10 + i*32, 320, 32);
+            }
+        }
+
+        function drawGhost(g) {
+            ctx.fillStyle = g.color;
+            ctx.beginPath();
+            ctx.arc(g.x, g.y, 12, Math.PI, 0);
+            ctx.lineTo(g.x + 12, g.y + 12);
+            ctx.lineTo(g.x - 12, g.y + 12);
+            ctx.fill();
+            // Gözler
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(g.x-5, g.y-2, 3, 0, Math.PI*2);
+            ctx.arc(g.x+5, g.y-2, 3, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        function update() {
             ctx.fillStyle = "black";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawMap();
 
-            // Labirent
-            ctx.strokeStyle = "#0052FF";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(10, 10, 300, 300);
-
-            // Pacman Hareketi
-            x += 2 * dir;
-            if (x > 260 || x < 60) dir *= -1;
+            // Pacman Hareketi ve Animasyonu
+            pacman.x += 1.5 * pacman.dir;
+            if(pacman.x > 310 || pacman.x < 30) pacman.dir *= -1;
+            pacman.mouth = Math.abs(Math.sin(Date.now() / 150)) * 0.25;
 
             ctx.fillStyle = "#facc15";
             ctx.beginPath();
-            let mouth = Math.abs(Math.sin(Date.now() / 200)) * 0.2;
-            ctx.arc(x, y, 15, (dir === 1 ? mouth : 1 + mouth) * Math.PI, (dir === 1 ? 2 - mouth : 1 - mouth) * Math.PI);
-            ctx.lineTo(x, y);
+            const start = (pacman.dir === 1) ? pacman.mouth : (1 + pacman.mouth);
+            const end = (pacman.dir === 1) ? (2 - pacman.mouth) : (1 - pacman.mouth);
+            ctx.arc(pacman.x, 170, 15, start * Math.PI, end * Math.PI);
+            ctx.lineTo(pacman.x, 170);
             ctx.fill();
+
+            // Hayaletleri Çiz ve Hareket Ettir
+            ghosts.forEach(g => {
+                g.x -= g.speed;
+                if(g.x < 30) g.x = 310;
+                drawGhost(g);
+            });
 
             score++;
             document.getElementById("scoreDisplay").innerText = score;
-            requestAnimationFrame(startEngine);
+            requestAnimationFrame(update);
         }
 
-        // --- 2. SDK VE BAŞLATMA ---
-        window.onload = async () => {
-            console.log("Sistem başlatılıyor...");
-            startEngine(); // Oyun her halükarda başlasın
-
-            try {
-                if (window.farcaster?.sdk) {
-                    await window.farcaster.sdk.actions.ready();
-                }
-            } catch (e) { console.error("Farcaster SDK hatası"); }
-        };
-
-        // --- 3. MINT MANTIĞI ---
+        // --- 2. SDK VE MINT ---
         const CLIENT_ID = "c1fd1c7e41a57fd4f1776293db6fb49e";
         const CONTRACT_ADDR = "0xA0282E2E89868661643668866E5363e7cC";
+
+        window.onload = async () => {
+            update();
+            if (window.farcaster?.sdk) {
+                try { await window.farcaster.sdk.actions.ready(); } catch(e){}
+            }
+        };
 
         document.getElementById("mintButton").onclick = async () => {
             const btn = document.getElementById("mintButton");
             btn.disabled = true;
-            btn.innerText = "Connecting...";
-            
+            btn.innerText = "WAITING...";
             try {
                 const sdk = new ThirdwebSDK("base", { clientId: CLIENT_ID });
                 const contract = await sdk.getContract(CONTRACT_ADDR);
                 await contract.erc721.claim(1);
-                btn.innerText = "Minted!";
+                btn.innerText = "MINTED!";
                 btn.style.background = "#22c55e";
             } catch (err) {
-                console.error(err);
                 btn.disabled = false;
-                btn.innerText = "Failed - Try Again";
+                btn.innerText = "RETRY MINT";
             }
         };
     </script>
