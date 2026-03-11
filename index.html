@@ -4,113 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="talent-protocol-verification" content="0f889eb79f4544769a667829db6fb49e">
-    <title>Base Pac-Man | Onchain Mini-App</title>
-    
+    <title>Base Pac-Man</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
-    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
-
     <style>
-        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; touch-action: none; }
-        #game-container { border: 4px solid #0052FF; position: relative; background: #000; box-shadow: 0 0 20px rgba(0, 82, 255, 0.4); }
-        canvas { display: block; image-rendering: pixelated; }
-        .ui-panel { width: 320px; margin-top: 20px; text-align: center; }
-        .mint-btn { background: #0052FF; transition: all 0.2s ease; text-transform: uppercase; font-size: 10px; cursor: pointer; }
-        .mint-btn:hover { background: #003db3; transform: translateY(-2px); }
-        .mint-btn:disabled { background: #333; cursor: not-allowed; transform: none; }
-        #score-val { color: #facc15; }
+        body { background: #000; color: #fff; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+        #game-container { border: 4px solid #0052FF; position: relative; background: #000; box-shadow: 0 0 20px #0052FF; line-height: 0; }
+        canvas { display: block; background: #000; }
+        .mint-btn { background: #0052FF; font-size: 10px; cursor: pointer; transition: 0.2s; border-radius: 8px; }
+        .mint-btn:hover { background: #003db3; }
+        .mint-btn:disabled { background: #333; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <div class="ui-panel mb-4 text-sm uppercase">Score: <span id="score-val">0</span></div>
+    <div class="mb-4 text-[#facc15] text-sm">SCORE: <span id="scoreDisplay">0</span></div>
     
     <div id="game-container">
         <canvas id="pacmanCanvas" width="320" height="320"></canvas>
     </div>
 
-    <div class="ui-panel px-2">
-        <button id="mintButton" class="mint-btn w-full py-4 rounded-lg font-bold shadow-xl mb-4">
-            Mint Score NFT
+    <div class="mt-6 w-[320px] px-4 text-center">
+        <button id="mintButton" class="mint-btn w-full py-4 font-bold shadow-lg uppercase">
+            MINT SCORE NFT
         </button>
-        <p id="status" class="text-[7px] text-gray-500 uppercase tracking-widest italic">Verified on Base Mainnet</p>
+        <p id="status" class="text-[7px] mt-4 text-gray-500 italic uppercase">Base Network Verified</p>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.17/dist/index.min.js"></script>
+    <script src="https://unpkg.com/@thirdweb-dev/sdk@latest/dist/thirdweb-sdk.min.js"></script>
+
     <script>
-        // 1. INITIALIZE SDKS
-        const CLIENT_ID = "c1fd1c7e41a57fd4f1776293db6fb49e";
-        const CONTRACT_ADDR = "0xA0282E2E89868661643668866E5363e7cC";
-        
-        window.addEventListener('load', async () => {
-            if (window.farcaster?.sdk) {
-                await window.farcaster.sdk.actions.ready();
-            }
-        });
-
-        const sdk = new ThirdwebSDK("base", { clientId: CLIENT_ID });
-
-        // 2. MINT LOGIC
-        document.getElementById("mintButton").onclick = async () => {
-            const btn = document.getElementById("mintButton");
-            const status = document.getElementById("status");
-            
-            btn.disabled = true;
-            btn.innerText = "Processing...";
-            
-            try {
-                const contract = await sdk.getContract(CONTRACT_ADDR);
-                await contract.erc721.claim(1);
-                btn.innerText = "Claimed!";
-                btn.style.background = "#22c55e";
-                status.innerText = "Check your wallet for the NFT";
-            } catch (err) {
-                console.error(err);
-                btn.disabled = false;
-                btn.innerText = "Mint Failed - Retry";
-                status.innerText = "Wallet error or network busy";
-            }
-        };
-
-        // 3. ENGINE
+        // --- 1. MOTOR VE ÇİZİM ---
         const canvas = document.getElementById("pacmanCanvas");
         const ctx = canvas.getContext("2d");
         let score = 0;
-        let x = 160, y = 160, radius = 15;
-        let mouthOpen = 0;
-        let dir = 1;
+        let x = 160, y = 160, dir = 1;
 
-        function render() {
+        function startEngine() {
             ctx.fillStyle = "black";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Base Maze
+            // Labirent
             ctx.strokeStyle = "#0052FF";
             ctx.lineWidth = 4;
             ctx.strokeRect(10, 10, 300, 300);
-            ctx.strokeRect(80, 80, 160, 160);
 
-            // Animation
+            // Pacman Hareketi
             x += 2 * dir;
             if (x > 260 || x < 60) dir *= -1;
-            mouthOpen = Math.abs(Math.sin(Date.now() / 150)) * 0.25;
 
-            // Draw Pacman
             ctx.fillStyle = "#facc15";
             ctx.beginPath();
-            const startAngle = (dir === 1) ? mouthOpen : (1 + mouthOpen);
-            const endAngle = (dir === 1) ? (2 - mouthOpen) : (1 - mouthOpen);
-            ctx.arc(x, y, radius, startAngle * Math.PI, endAngle * Math.PI);
+            let mouth = Math.abs(Math.sin(Date.now() / 200)) * 0.2;
+            ctx.arc(x, y, 15, (dir === 1 ? mouth : 1 + mouth) * Math.PI, (dir === 1 ? 2 - mouth : 1 - mouth) * Math.PI);
             ctx.lineTo(x, y);
             ctx.fill();
 
-            // Score
             score++;
-            document.getElementById("score-val").innerText = score;
-            requestAnimationFrame(render);
+            document.getElementById("scoreDisplay").innerText = score;
+            requestAnimationFrame(startEngine);
         }
-        render();
+
+        // --- 2. SDK VE BAŞLATMA ---
+        window.onload = async () => {
+            console.log("Sistem başlatılıyor...");
+            startEngine(); // Oyun her halükarda başlasın
+
+            try {
+                if (window.farcaster?.sdk) {
+                    await window.farcaster.sdk.actions.ready();
+                }
+            } catch (e) { console.error("Farcaster SDK hatası"); }
+        };
+
+        // --- 3. MINT MANTIĞI ---
+        const CLIENT_ID = "c1fd1c7e41a57fd4f1776293db6fb49e";
+        const CONTRACT_ADDR = "0xA0282E2E89868661643668866E5363e7cC";
+
+        document.getElementById("mintButton").onclick = async () => {
+            const btn = document.getElementById("mintButton");
+            btn.disabled = true;
+            btn.innerText = "Connecting...";
+            
+            try {
+                const sdk = new ThirdwebSDK("base", { clientId: CLIENT_ID });
+                const contract = await sdk.getContract(CONTRACT_ADDR);
+                await contract.erc721.claim(1);
+                btn.innerText = "Minted!";
+                btn.style.background = "#22c55e";
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerText = "Failed - Try Again";
+            }
+        };
     </script>
 </body>
 </html>
