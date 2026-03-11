@@ -1,0 +1,17 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Base Pac-Man",
+    "homeUrl": "https://pacman-base-xi.vercel.app/",
+    "iconUrl": "https://pacman-base-xi.vercel.app/icon.png",
+    "description": "Klasik Pac-Man oyunu Farcaster Mini App olarak – skorunu mint et!",
+    "buttonTitle": "Pac-Man Oyna!",
+    "splashImageUrl": "https://pacman-base-xi.vercel.app/splash.png",
+    "splashBackgroundColor": "#000000"
+  },
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  }
+}
